@@ -1,4 +1,4 @@
-# Cadencia
+# RRSS Planner
 
 App de escritorio (Windows y Mac) para gestionar redes sociales: ideas, tareas, calendario,
 publicación en Instagram, LinkedIn, X y YouTube, métricas y un asistente con Claude.
@@ -38,8 +38,8 @@ herramientas de desarrollo.
 
 ## Dónde están tus datos
 
-En desarrollo: `%APPDATA%\Cadencia-dev\data` (Windows) o
-`~/Library/Application Support/Cadencia-dev/data` (Mac).
+En desarrollo: `%APPDATA%\RRSS Planner-dev\data` (Windows) o
+`~/Library/Application Support/RRSS Planner-dev/data` (Mac).
 En la app instalada, la misma ruta sin `-dev`. Ajustes → Datos → "Abrir carpeta" te lleva allí.
 
 ## Estructura

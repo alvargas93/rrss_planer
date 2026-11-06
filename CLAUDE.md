@@ -86,4 +86,4 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - En Windows, el alias `python` de la Microsoft Store se cuelga: no usarlo en scripts.
 - `npm install` de paquetes nuevos puede fallar con "edgesOut" (bug de npm 10.8 con
   vitest); reintentar con `--legacy-peer-deps`.
-- Datos de desarrollo en `%APPDATA%\Cadencia-dev\data`; la app instalada usa `Cadencia`.
+- Datos de desarrollo en `%APPDATA%\RRSS Planner-dev\data`; la app instalada usa `RRSS Planner`.

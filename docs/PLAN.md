@@ -1,7 +1,7 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
 > Versión 2 · 2026-11-06 · Fase 1 completada
-> Estado: stack aprobado (Electron). Nombre provisional de la app: **Cadencia**.
+> Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento aplicado: propuesta A (violeta → coral), pendiente de confirmar.
 
 Este documento es la especificación de referencia del proyecto (no existía `docs/PRD.md`,

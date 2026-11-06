@@ -2,11 +2,11 @@ import { app } from 'electron'
 import { join } from 'path'
 import { mkdirSync } from 'fs'
 
-export const APP_DISPLAY_NAME = 'Cadencia'
+export const APP_DISPLAY_NAME = 'RRSS Planner'
 
 /**
  * Carpeta de datos del usuario. En desarrollo usamos una carpeta distinta
- * ("Cadencia-dev") para no mezclar datos con una instalación real.
+ * ("RRSS Planner-dev") para no mezclar datos con una instalación real.
  * Debe llamarse ANTES de `app.whenReady()`.
  */
 export function configureUserDataPath(): void {
@@ -27,7 +27,7 @@ export function getMediaDir(): string {
 }
 
 export function getDbPath(): string {
-  return join(getDataDir(), 'cadencia.db')
+  return join(getDataDir(), 'rrss-planner.db')
 }
 
 /** Carpeta con las migraciones SQL (dentro del paquete en producción). */

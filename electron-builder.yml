@@ -1,5 +1,5 @@
-appId: com.vargas.cadencia
-productName: Cadencia
+appId: com.vargas.rrssplanner
+productName: RRSS Planner
 directories:
   buildResources: build
 files:
@@ -17,7 +17,7 @@ extraResources:
 asarUnpack:
   - 'resources/**'
 win:
-  executableName: Cadencia
+  executableName: RRSS Planner
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

@@ -39,7 +39,7 @@ const theme = (win) => win.evaluate(() => document.documentElement.dataset.theme
 {
   const { app, win, errors } = await launch()
   await win.waitForSelector('text=Hoja de ruta', { timeout: 15000 })
-  check((await win.title()) === 'Cadencia', 'título de la ventana es "Cadencia"')
+  check((await win.title()) === 'RRSS Planner', 'título de la ventana es "RRSS Planner"')
   await win.screenshot({ path: join(shots, '01-inicio.png') })
 
   await win.getByRole('link', { name: 'Ajustes', exact: true }).click()

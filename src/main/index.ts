@@ -28,7 +28,7 @@ function createWindow(settings: SettingsService): void {
     minHeight: 680,
     show: false,
     autoHideMenuBar: true,
-    title: 'Cadencia',
+    title: 'RRSS Planner',
     // Color de fondo mientras carga, para evitar un destello blanco en modo oscuro.
     backgroundColor: dark ? '#0f1014' : '#f6f6f8',
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -67,7 +67,7 @@ function bootstrap(): SettingsService {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.vargas.cadencia')
+  electronApp.setAppUserModelId('com.vargas.rrssplanner')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -80,7 +80,7 @@ app.whenReady().then(() => {
     const message = error instanceof Error ? error.message : String(error)
     log.error('No se pudo iniciar la base de datos', message)
     dialog.showErrorBox(
-      'Cadencia no puede arrancar',
+      'RRSS Planner no puede arrancar',
       `No se pudo abrir la base de datos local.\n\n${message}\n\nRuta: ${getDbPath()}`
     )
     app.quit()

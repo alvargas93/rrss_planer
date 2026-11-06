@@ -1,6 +1,6 @@
 {
-  "name": "cadencia",
-  "productName": "Cadencia",
+  "name": "rrss-planner",
+  "productName": "RRSS Planner",
   "version": "0.1.0",
   "description": "Gestor de redes sociales de escritorio: ideas, calendario, publicación y métricas con ayuda de Claude.",
   "main": "./out/main/index.js",

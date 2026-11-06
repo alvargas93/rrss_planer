@@ -50,9 +50,9 @@ export function Sidebar(): React.JSX.Element {
           aria-hidden
           className="grid size-8 place-items-center rounded-md bg-accent-gradient text-accent-fg shadow-sm"
         >
-          <span className="text-[15px] font-bold">C</span>
+          <span className="text-[13px] font-bold">RP</span>
         </div>
-        <span className="text-[17px] font-semibold tracking-tight">Cadencia</span>
+        <span className="text-[17px] font-semibold tracking-tight">RRSS Planner</span>
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 px-3" aria-label="Secciones">

@@ -32,7 +32,7 @@ export function DashboardPage(): React.JSX.Element {
     <>
       <PageHeader
         title="Inicio"
-        description="Cadencia es tu centro de mando para redes sociales. Por ahora, la base está lista: la organización llega en la siguiente fase."
+        description="RRSS Planner es tu centro de mando para redes sociales. Por ahora, la base está lista: la organización llega en la siguiente fase."
       />
 
       <section className="mb-6 overflow-hidden rounded-xl bg-accent-gradient p-8 text-white shadow-md animate-in fade-in-0 slide-in-from-bottom-2">
