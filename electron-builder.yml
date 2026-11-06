@@ -1,0 +1,37 @@
+appId: com.vargas.cadencia
+productName: Cadencia
+directories:
+  buildResources: build
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!docs/*'
+  - '!tests/*'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,CLAUDE.md}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,drizzle.config.ts,vitest.config.ts}'
+extraResources:
+  - from: drizzle
+    to: drizzle
+asarUnpack:
+  - 'resources/**'
+win:
+  executableName: Cadencia
+nsis:
+  artifactName: ${name}-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+mac:
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    - NSDocumentsFolderUsageDescription: La aplicación necesita acceso a tus documentos para importar medios.
+    - NSDownloadsFolderUsageDescription: La aplicación necesita acceso a tus descargas para importar medios.
+  notarize: false
+dmg:
+  artifactName: ${name}-${version}.${ext}
+npmRebuild: false
+publish:
+  provider: generic
+  url: https://example.com/auto-updates

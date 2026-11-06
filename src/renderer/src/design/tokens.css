@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+
+/* Variante `dark:` ligada al atributo data-theme, no a la preferencia del SO.
+   El tema efectivo lo decide la app (claro / oscuro / seguir al sistema). */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* =====================================================================
+   TOKENS. Única fuente de verdad para color, radio, sombra y movimiento.
+   Los componentes nunca usan colores literales: siempre estas variables
+   (a través de las utilidades de Tailwind definidas en @theme más abajo).
+   ===================================================================== */
+:root {
+  color-scheme: light;
+
+  --bg: #f6f6f8;
+  --surface: #ffffff;
+  --surface-2: #efeff3;
+  --surface-3: #e4e4ea;
+
+  --text: #15161a;
+  --text-muted: #5c6070;
+  --text-subtle: #868a98;
+
+  --border: #e2e3ea;
+  --border-strong: #c9cbd6;
+
+  /* Acento propio: violeta profundo → coral cálido */
+  --accent: #6b3ff2;
+  --accent-hover: #5a2fe0;
+  --accent-fg: #ffffff;
+  --accent-soft: #efeafe;
+  --accent-from: #6b3ff2;
+  --accent-to: #ff6b5b;
+
+  --success: #1f9d61;
+  --warning: #c77d00;
+  --danger: #d9403a;
+  --info: #2b6fe6;
+
+  --ring: #6b3ff2;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-sm: 0 1px 2px rgb(16 18 27 / 0.06);
+  --shadow-md: 0 6px 20px rgb(16 18 27 / 0.08);
+  --shadow-lg: 0 16px 40px rgb(16 18 27 / 0.12);
+
+  --motion-fast: 150ms;
+  --motion-base: 220ms;
+  --motion-slow: 320ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0f1014;
+  --surface: #17181d;
+  --surface-2: #1f2027;
+  --surface-3: #292a33;
+
+  --text: #edeef2;
+  --text-muted: #9a9eab;
+  --text-subtle: #6f7382;
+
+  --border: #2a2b33;
+  --border-strong: #3a3b45;
+
+  --accent: #7b52ff;
+  --accent-hover: #8e6bff;
+  --accent-fg: #ffffff;
+  --accent-soft: #241b4a;
+  --accent-from: #8a62ff;
+  --accent-to: #ff7a6b;
+
+  --success: #34c27d;
+  --warning: #e7a23a;
+  --danger: #ef6a63;
+  --info: #5b93f5;
+
+  --ring: #8e6bff;
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 6px 20px rgb(0 0 0 / 0.45);
+  --shadow-lg: 0 16px 40px rgb(0 0 0 / 0.55);
+}
+
+/* Mapeo a utilidades de Tailwind: bg-surface, text-muted, border-border, rounded-md… */
+@theme inline {
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-subtle: var(--text-subtle);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-from: var(--accent-from);
+  --color-accent-to: var(--accent-to);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg font-sans text-text antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+    overscroll-behavior: none;
+  }
+
+  /* Foco visible y consistente para teclado */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+  }
+
+  /* Barras de scroll discretas */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@utility bg-accent-gradient {
+  background-image: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+}
+
+@utility text-accent-gradient {
+  background-image: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Transición estándar para hover/estado */
+@utility transition-base {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--ease);
+}
+
+/* Reducir movimiento: lo decide la app (ajuste + preferencia del sistema)
+   y lo refleja en data-reduce-motion. */
+[data-reduce-motion='true'] *,
+[data-reduce-motion='true'] *::before,
+[data-reduce-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}

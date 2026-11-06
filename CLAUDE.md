@@ -54,8 +54,13 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 ## Tests y verificación
 
 - Unitarios con **Vitest** en `tests/unit/` para dominio, servicios, planificador y
-  conectores (APIs simuladas). Extremo a extremo con Playwright + Electron desde Fase 2.
+  conectores (APIs simuladas). Los tests corren en Node, no en Electron: better-sqlite3
+  está compilado para Electron, así que los servicios se prueban con repositorios en
+  memoria y la base de datos real se cubre con la prueba de humo.
+- Prueba de humo `npm run smoke` (tras `npm run build`): lanza la app con Playwright,
+  navega, cambia el tema, comprueba persistencia y guarda capturas en `tmp/smoke/`.
 - Antes de cada commit: `npm run typecheck`, `npm run lint`, `npm test` deben pasar.
+- Al cerrar una fase: también `npm run build` y `npm run smoke`.
 - Al entregar una fase, incluir en el mensaje al usuario los pasos manuales de prueba.
 
 ## Git
@@ -64,11 +69,21 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - Un commit al cerrar cada fase como mínimo; commits intermedios cuando un bloque funcione.
 - No se suben: `node_modules/`, `out/`, `dist/`, `.env*`, bases de datos locales, medios.
 
-## Comandos (se completan en Fase 1)
+## Comandos
 
-- `npm install` · instalar dependencias
+- `npm install` · instalar dependencias (descarga Electron y compila better-sqlite3)
 - `npm run dev` · arrancar en desarrollo con recarga
 - `npm run typecheck` · comprobar tipos
-- `npm run lint` · estilo
+- `npm run lint` · estilo (`npm run format` arregla el formato)
 - `npm test` · tests unitarios
-- `npm run build` · compilar; `npm run dist` · instaladores (Fase 8)
+- `npm run db:generate` · generar migración tras cambiar `src/main/db/schema.ts`
+- `npm run build` · compilar a `out/`
+- `npm run smoke` · prueba de humo sobre la app compilada
+- `npm run build:win` / `build:mac` · instaladores (Fase 8)
+
+## Notas de entorno
+
+- En Windows, el alias `python` de la Microsoft Store se cuelga: no usarlo en scripts.
+- `npm install` de paquetes nuevos puede fallar con "edgesOut" (bug de npm 10.8 con
+  vitest); reintentar con `--legacy-peer-deps`.
+- Datos de desarrollo en `%APPDATA%\Cadencia-dev\data`; la app instalada usa `Cadencia`.

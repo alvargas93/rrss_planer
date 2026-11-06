@@ -29,3 +29,14 @@ Thumbs.db
 npm-debug.log*
 coverage/
 tmp/
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
+.eslintcache
+
+# Capturas y salidas de pruebas
+tmp/
