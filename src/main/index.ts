@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, nativeTheme } from 'electron'
+import { app, shell, BrowserWindow, dialog, nativeTheme, safeStorage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -14,7 +14,11 @@ import { SettingsService } from './services/settings.service'
 import { TasksService } from './services/tasks.service'
 import { MEDIA_FILE_FILTERS, MediaService } from './services/media.service'
 import { DashboardService } from './services/dashboard.service'
+import { AiRepository } from './repositories/ai.repository'
+import { AiService } from './ai/ai.service'
+import { SafeStorageSecretStore } from './secrets/secrets.service'
 import { handleMediaProtocol, registerMediaScheme } from './media/protocol'
+import type { EventName, EventPayload } from '@shared/contracts/events'
 import { registerAllIpc } from './ipc/register-all'
 import { createLogger } from './log'
 
@@ -68,6 +72,13 @@ function createWindow(settings: SettingsService): void {
   }
 }
 
+/** Empuja un evento a todas las ventanas abiertas (streaming de Claude, avisos…). */
+function broadcast<K extends EventName>(channel: K, payload: EventPayload<K>): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send(channel, payload)
+  }
+}
+
 /** Selector de archivos del sistema, anclado a la ventana principal. */
 async function pickMediaFiles(): Promise<string[]> {
   const result = await dialog.showOpenDialog(mainWindow ?? new BrowserWindow({ show: false }), {
@@ -92,8 +103,15 @@ function bootstrap(): SettingsService {
   const tasks = new TasksService(tasksRepo)
   const media = new MediaService(mediaRepo, getMediaDir(), pickMediaFiles)
   const dashboard = new DashboardService(tasksRepo, ideas, posts, pillars)
+  const ai = new AiService({
+    repo: new AiRepository(db),
+    secrets: new SafeStorageSecretStore(db),
+    settings,
+    emit: (event) => broadcast('ai:stream', event),
+    encryptionAvailable: () => safeStorage.isEncryptionAvailable()
+  })
 
-  registerAllIpc({ settings, pillars, ideas, tasks, posts, media, dashboard })
+  registerAllIpc({ settings, pillars, ideas, tasks, posts, media, dashboard, ai })
   handleMediaProtocol(getMediaDir())
   return settings
 }

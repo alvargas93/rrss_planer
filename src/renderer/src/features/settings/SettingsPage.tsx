@@ -23,6 +23,7 @@ import {
 } from '@renderer/components/ui/select'
 import { useAppInfo, useResetSettings, useSettings, useUpdateSettings } from './useSettings'
 import { AccentSamples } from './AccentSamples'
+import { AiSettingsCard } from './AiSettingsCard'
 
 function Row({
   label,
@@ -171,6 +172,8 @@ export function SettingsPage(): React.JSX.Element {
             </Row>
           </CardContent>
         </Card>
+
+        <AiSettingsCard settings={settings} />
 
         <Card>
           <CardHeader>

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { AiSettingsSchema } from './ai'
 
 export const ThemePreferenceSchema = z.enum(['light', 'dark', 'system'])
 export type ThemePreference = z.infer<typeof ThemePreferenceSchema>
@@ -26,18 +27,20 @@ export const GeneralSettingsSchema = z.object({
 
 export const SettingsSchema = z.object({
   appearance: AppearanceSettingsSchema.default(() => AppearanceSettingsSchema.parse({})),
-  general: GeneralSettingsSchema.default(() => GeneralSettingsSchema.parse({}))
+  general: GeneralSettingsSchema.default(() => GeneralSettingsSchema.parse({})),
+  ai: AiSettingsSchema.default(() => AiSettingsSchema.parse({}))
 })
 
 export type Settings = z.infer<typeof SettingsSchema>
 export type SettingsSection = keyof Settings
 
-export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'general']
+export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'general', 'ai']
 
 /** Parche parcial: cualquier subconjunto de claves de cualquier sección. */
 export const SettingsPatchSchema = z.object({
   appearance: AppearanceSettingsSchema.partial().optional(),
-  general: GeneralSettingsSchema.partial().optional()
+  general: GeneralSettingsSchema.partial().optional(),
+  ai: AiSettingsSchema.partial().optional()
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
 
@@ -47,6 +50,7 @@ export const DEFAULT_SETTINGS: Settings = SettingsSchema.parse({})
 export function applySettingsPatch(current: Settings, patch: SettingsPatch): Settings {
   return SettingsSchema.parse({
     appearance: { ...current.appearance, ...(patch.appearance ?? {}) },
-    general: { ...current.general, ...(patch.general ?? {}) }
+    general: { ...current.general, ...(patch.general ?? {}) },
+    ai: { ...current.ai, ...(patch.ai ?? {}) }
   })
 }

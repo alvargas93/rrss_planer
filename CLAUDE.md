@@ -81,6 +81,15 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - `npm run smoke` · prueba de humo sobre la app compilada
 - `npm run build:win` / `build:mac` · instaladores (Fase 8)
 
+## Integración con Claude (Fase 3)
+
+- Todo el código que habla con la API vive en `src/main/ai/`. La interfaz nunca ve la clave.
+- Los prompts están en `src/main/ai/prompts.ts` como funciones puras con tests.
+- Nuevas acciones: añadir el `kind` y su esquema Zod en `src/shared/domain/ai.ts`, el
+  prompt en `prompts.ts` y la tarjeta de resultado en `features/ai/ActionResultCard.tsx`.
+- Las pruebas del servicio usan un cliente falso (`tests/unit/ai.test.ts`); no se llama a
+  la API real en tests ni en la prueba de humo.
+
 ## Notas de entorno
 
 - En Windows, el alias `python` de la Microsoft Store se cuelga: no usarlo en scripts.

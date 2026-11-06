@@ -15,6 +15,16 @@ import {
 } from '../domain/posts'
 import { MediaAssetSchema, MediaUpdateSchema } from '../domain/media'
 import { DashboardSummarySchema } from '../domain/dashboard'
+import {
+  ActionRequestSchema,
+  AiConversationSchema,
+  AiMessageSchema,
+  AiStatusSchema,
+  ChatRequestSchema,
+  ModelInfoSchema,
+  ScreenContextSchema,
+  UsageSummarySchema
+} from '../domain/ai'
 
 const ById = z.object({ id: IdSchema })
 
@@ -64,7 +74,35 @@ export const contracts = {
   'media:update': { input: MediaUpdateSchema, output: MediaAssetSchema },
   'media:delete': { input: ById, output: z.void() },
 
-  'dashboard:summary': { input: z.undefined(), output: DashboardSummarySchema }
+  'dashboard:summary': { input: z.undefined(), output: DashboardSummarySchema },
+
+  // --- Claude ---
+  'ai:status': { input: z.undefined(), output: AiStatusSchema },
+  'ai:setApiKey': {
+    input: z.object({ apiKey: z.string().trim().min(10) }),
+    output: AiStatusSchema
+  },
+  'ai:clearApiKey': { input: z.undefined(), output: AiStatusSchema },
+  /** Verifica la clave contra la API y devuelve los modelos disponibles. */
+  'ai:testConnection': { input: z.undefined(), output: z.array(ModelInfoSchema) },
+  'ai:usageHistory': { input: z.undefined(), output: z.array(UsageSummarySchema) },
+  'ai:conversations:list': { input: z.undefined(), output: z.array(AiConversationSchema) },
+  'ai:conversations:create': {
+    input: z.object({
+      title: z.string().trim().max(120).default(''),
+      context: ScreenContextSchema.optional()
+    }),
+    output: AiConversationSchema
+  },
+  'ai:conversations:delete': { input: ById, output: z.void() },
+  'ai:messages:list': {
+    input: z.object({ conversationId: IdSchema }),
+    output: z.array(AiMessageSchema)
+  },
+  /** Envía un mensaje; la respuesta llega por streaming (evento ai:stream) y al final completa. */
+  'ai:chat': { input: ChatRequestSchema, output: AiMessageSchema },
+  /** Ejecuta una acción con salida estructurada (ideas, guion, adaptar…). */
+  'ai:runAction': { input: ActionRequestSchema, output: AiMessageSchema }
 } as const
 
 export type Contracts = typeof contracts

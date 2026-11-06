@@ -33,6 +33,9 @@ import { useUpdateMedia } from '@renderer/features/media/useMedia'
 import { fromDateTimeLocal, toDateTimeLocal } from '@renderer/lib/dates'
 import { cn } from '@renderer/lib/utils'
 import { NetworkPreview } from './NetworkPreview'
+import { usePillars } from '@renderer/features/pillars/usePillars'
+import { useScreenContext } from '@renderer/features/ai/useScreenContext'
+import { useComposerBridge, type ComposerInsert } from '@renderer/features/ai/stores'
 import {
   useCreatePost,
   useDeletePost,
@@ -197,6 +200,58 @@ function ComposerForm({
     () => (Object.keys(initial.variants)[0] as Network | undefined) ?? null
   )
   const [pickerOpen, setPickerOpen] = React.useState(false)
+  const { data: pillars } = usePillars()
+
+  // El asistente ve la publicación que se está editando.
+  useScreenContext({
+    screen: 'composer',
+    post: {
+      id: postId,
+      title: form.title,
+      body: form.body,
+      pillar: pillars?.find((p) => p.id === form.pillarId)?.name ?? null,
+      scheduledAt: form.scheduledAt,
+      variants: NETWORKS.filter((n) => form.variants[n]).map((n) => ({
+        network: n,
+        kind: form.variants[n]!.kind,
+        text: form.variants[n]!.text
+      }))
+    }
+  })
+
+  // Recibe lo que el asistente quiera insertar (texto base, versión por red, hashtags).
+  const setMounted = useComposerBridge((s) => s.setMounted)
+  const takeInsert = useComposerBridge((s) => s.take)
+  React.useEffect(() => {
+    setMounted(true)
+    const apply = (insert: ComposerInsert | null): void => {
+      if (!insert) return
+      setForm((current) => {
+        if (insert.kind === 'body') return { ...current, body: insert.text }
+        if (insert.kind === 'appendBody') return { ...current, body: current.body + insert.text }
+        const variant = current.variants[insert.network] ?? {
+          kind: NETWORK_META[insert.network].defaultKind,
+          text: '',
+          extra: {}
+        }
+        return {
+          ...current,
+          variants: { ...current.variants, [insert.network]: { ...variant, text: insert.text } }
+        }
+      })
+      setDirty(true)
+      if (insert.kind === 'variant') setActiveNetwork(insert.network)
+    }
+    // Lo que ya esperaba antes de montar, y lo que llegue después.
+    queueMicrotask(() => apply(takeInsert()))
+    const unsubscribe = useComposerBridge.subscribe((state) => {
+      if (state.pending) apply(takeInsert())
+    })
+    return () => {
+      unsubscribe()
+      setMounted(false)
+    }
+  }, [setMounted, takeInsert])
   const [confirmDelete, setConfirmDelete] = React.useState(false)
 
   const patch = (changes: Partial<FormState>): void => {

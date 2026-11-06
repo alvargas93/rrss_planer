@@ -4,7 +4,7 @@ import { SettingsPatchSchema, applySettingsPatch, DEFAULT_SETTINGS } from '@shar
 
 describe('contratos IPC', () => {
   it('todos los canales siguen la convención modulo:accion', () => {
-    for (const name of channelNames) expect(name).toMatch(/^[a-z]+:[a-zA-Z]+$/)
+    for (const name of channelNames) expect(name).toMatch(/^[a-z]+(:[a-zA-Z]+)+$/)
   })
 
   it('cada canal declara entrada y salida', () => {

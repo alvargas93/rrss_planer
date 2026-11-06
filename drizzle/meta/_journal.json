@@ -15,6 +15,13 @@
       "when": 1793975976477,
       "tag": "0001_fase2_organizacion",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793978840082,
+      "tag": "0002_fase3_claude",
+      "breakpoints": true
     }
   ]
 }

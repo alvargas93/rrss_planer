@@ -9,6 +9,7 @@ import type { DashboardService } from '../services/dashboard.service'
 import type { PillarsRepository } from '../repositories/pillars.repository'
 import type { IdeasRepository } from '../repositories/ideas.repository'
 import type { PostsRepository } from '../repositories/posts.repository'
+import type { AiService } from '../ai/ai.service'
 import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
 
 export interface IpcDependencies {
@@ -19,6 +20,7 @@ export interface IpcDependencies {
   posts: PostsRepository
   media: MediaService
   dashboard: DashboardService
+  ai: AiService
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -87,4 +89,19 @@ export function registerAllIpc(deps: IpcDependencies): void {
 
   // --- dashboard ---
   handle('dashboard:summary', () => deps.dashboard.summary())
+
+  // --- Claude ---
+  handle('ai:status', () => deps.ai.status())
+  handle('ai:setApiKey', ({ apiKey }) => deps.ai.setApiKey(apiKey))
+  handle('ai:clearApiKey', () => deps.ai.clearApiKey())
+  handle('ai:testConnection', () => deps.ai.testConnection())
+  handle('ai:usageHistory', () => deps.ai.usageHistory())
+  handle('ai:conversations:list', () => deps.ai.listConversations())
+  handle('ai:conversations:create', ({ title, context }) =>
+    deps.ai.createConversation(title, context)
+  )
+  handle('ai:conversations:delete', ({ id }) => deps.ai.deleteConversation(id))
+  handle('ai:messages:list', ({ conversationId }) => deps.ai.listMessages(conversationId))
+  handle('ai:chat', (request) => deps.ai.chat(request))
+  handle('ai:runAction', (request) => deps.ai.runAction(request))
 }

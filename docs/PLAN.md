@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 3 · 2026-11-06 · Fase 2 completada
+> Versión 4 · 2026-11-06 · Fase 3 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -263,6 +263,30 @@ para que la copia de seguridad sea completa).
 - **Tabla `tasks`** añade `completed_at`; **`media_assets`** guarda `file_name` (nombre
   dentro de la carpeta de medios) en vez de una ruta absoluta, para que la copia de
   seguridad sea portable.
+
+### 5.2 Decisiones aplicadas en Fase 3 (Claude)
+
+- **SDK oficial `@anthropic-ai/sdk`** (v1.6) contra la API de Anthropic con la clave del
+  usuario. Chat por streaming (`messages.stream`) y acciones con salida estructurada
+  (`messages.parse` + esquema Zod), ambas en el espacio `beta` para poder activar el
+  **reintento automático en otro modelo si Claude declina por seguridad**
+  (`fallbacks: "default"`). Es un ajuste activado por defecto que se puede apagar.
+- **Clave cifrada con `safeStorage`** en la tabla `secrets`; el proceso principal es el
+  único que la ve. La interfaz solo recibe "hay clave" y sus 4 últimos caracteres.
+- **Modelo y esfuerzo configurables**; por defecto `claude-opus-5-5` con esfuerzo medio.
+  La lista de modelos se obtiene de la API al "Probar conexión".
+- **Coste estimado localmente** con una tabla de precios editable (entrada, salida, caché).
+  Cada llamada guarda tokens y coste en `ai_usage`; el **límite mensual** bloquea nuevas
+  llamadas al alcanzarse y avisa al 80 %. Es una estimación: la factura real la fija Anthropic.
+- **Contexto de pantalla**: cada página declara lo que ve el asistente (publicación abierta,
+  idea, pilares). Va en un bloque de sistema separado del texto estable para que la caché
+  de prompts pueda aprovechar la parte fija.
+- **Acciones aplicables con confirmación**: los resultados (ideas, guion, adaptaciones,
+  hashtags, plan semanal) traen botones que escriben en el compositor o crean ideas y
+  borradores; crear los borradores del plan semanal pide confirmación. Claude nunca
+  publica ni borra.
+- Las acciones "subtítulos" y "resumen de métricas" se añaden en las Fases 6 y 5, cuando
+  exista la fuente de datos.
 
 ## 6. Diseño
 

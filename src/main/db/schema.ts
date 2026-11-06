@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /**
  * Esquema de la base de datos (Drizzle). Cada fase añade sus tablas aquí y genera
@@ -132,6 +132,51 @@ export const mediaAssets = sqliteTable('media_assets', {
   derivedFrom: text('derived_from'),
   ...timestamps,
   ...softDelete
+})
+
+// ---------------------------------------------------------------- Fase 3
+
+/** Hilos del asistente. */
+export const aiConversations = sqliteTable('ai_conversations', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  /** screen | idea | post | account */
+  contextType: text('context_type').notNull().default('screen'),
+  contextId: text('context_id'),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Mensajes de cada hilo. `content_json` guarda bloques: texto o resultado de acción. */
+export const aiMessages = sqliteTable('ai_messages', {
+  id: text('id').primaryKey(),
+  conversationId: text('conversation_id')
+    .notNull()
+    .references(() => aiConversations.id, { onDelete: 'cascade' }),
+  /** user | assistant */
+  role: text('role').notNull(),
+  contentJson: text('content_json').notNull(),
+  model: text('model'),
+  inputTokens: integer('input_tokens').notNull().default(0),
+  outputTokens: integer('output_tokens').notNull().default(0),
+  costUsd: real('cost_usd').notNull().default(0),
+  createdAt: text('created_at').notNull()
+})
+
+/** Una fila por llamada a la API, para el contador de uso y el límite mensual. */
+export const aiUsage = sqliteTable('ai_usage', {
+  id: text('id').primaryKey(),
+  /** YYYY-MM en hora local, para agrupar rápido. */
+  month: text('month').notNull(),
+  model: text('model').notNull(),
+  /** chat | ideas | script | adapt | hashtags | weekly_plan | summary | captions */
+  kind: text('kind').notNull(),
+  inputTokens: integer('input_tokens').notNull(),
+  outputTokens: integer('output_tokens').notNull(),
+  cacheReadTokens: integer('cache_read_tokens').notNull().default(0),
+  cacheWriteTokens: integer('cache_write_tokens').notNull().default(0),
+  costUsd: real('cost_usd').notNull(),
+  createdAt: text('created_at').notNull()
 })
 
 /** Medios adjuntos a una publicación, con orden. */

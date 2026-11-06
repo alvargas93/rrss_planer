@@ -15,6 +15,7 @@ import { Skeleton } from '@renderer/components/ui/skeleton'
 import { keys, useIpcQuery } from '@renderer/lib/queries'
 import { fmtDateTime, fmtRelative, isOverdue } from '@renderer/lib/dates'
 import { cn } from '@renderer/lib/utils'
+import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 
 function Stat({
   label,
@@ -45,6 +46,7 @@ function Stat({
 
 export function DashboardPage(): React.JSX.Element {
   const navigate = useNavigate()
+  useScreenContext({ screen: 'dashboard' })
   const summary = useIpcQuery(keys.dashboard, 'dashboard:summary', undefined)
   const data: DashboardSummary | undefined = summary.data
 

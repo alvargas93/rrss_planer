@@ -231,6 +231,50 @@ const MESES = [
   await app.close()
 }
 
+// --- Sesión 4: Fase 3 · asistente y ajustes de Claude (sin clave real) ------
+{
+  const { app, win, errors } = await launch()
+  await win.waitForSelector('text=Próximos 7 días', { timeout: 15000 })
+
+  // El panel se abre desde la barra superior y pide la clave
+  await win.getByRole('button', { name: 'Abrir asistente' }).click()
+  const panel = win.getByRole('complementary', { name: 'Asistente' })
+  await panel.getByText('Conecta tu clave de Anthropic').waitFor()
+  check(true, 'panel del asistente abierto y pide la clave')
+  await win.screenshot({ path: join(shots, '20-asistente-sin-clave.png') })
+  await win.keyboard.press('Escape')
+
+  // Ajustes → Claude: guardar una clave de prueba (cifrada) y quitarla
+  await go(win, 'Ajustes', 'text=Apariencia')
+  await win.getByText('Claude', { exact: true }).waitFor()
+  await win.getByLabel('Nueva clave de API').fill('sk-ant-prueba-humo-0000')
+  await win.getByRole('button', { name: 'Guardar clave' }).click()
+  await win.getByText('Configurada').waitFor()
+  check(true, 'clave de prueba guardada cifrada')
+  const hint = await win.getByText(/termina en/).innerText()
+  check(hint.includes('0000'), `solo se muestran los últimos 4 caracteres (${hint.trim()})`)
+  await win.screenshot({ path: join(shots, '21-ajustes-claude.png') })
+
+  // Con clave, el panel ofrece las acciones; sin red real, una acción devuelve error claro
+  await win.getByRole('button', { name: 'Abrir asistente' }).click()
+  await panel.getByRole('button', { name: 'Generar ideas' }).waitFor()
+  check(true, 'panel muestra acciones rápidas con clave configurada')
+  await win.screenshot({ path: join(shots, '22-asistente-listo.png') })
+  await win.keyboard.press('Escape')
+
+  await win.getByRole('button', { name: 'Quitar' }).click()
+  await win.getByText('Consíguela en console.anthropic.com').waitFor()
+  check(true, 'clave eliminada')
+
+  // Página del asistente a pantalla completa
+  await go(win, 'Asistente', 'text=Claude conoce tus pilares')
+  check(true, 'página del asistente disponible')
+
+  check(errors.length === 0, `sin errores de consola en la sesión 4 (${errors.length})`)
+  if (errors.length) console.log(errors.join('\n'))
+  await app.close()
+}
+
 console.log(`\nCapturas en: ${shots}`)
 if (problems.length) {
   console.error(`\n${problems.length} comprobaciones fallidas`)

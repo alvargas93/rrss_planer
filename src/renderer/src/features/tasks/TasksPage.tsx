@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@renderer/components/ConfirmDialog'
 import { Button } from '@renderer/components/ui/button'
 import { Segmented } from '@renderer/components/ui/segmented'
 import { Skeleton } from '@renderer/components/ui/skeleton'
+import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { TaskBoard } from './TaskBoard'
 import { TaskList } from './TaskList'
 import { TaskDialog } from './TaskDialog'
@@ -17,6 +18,7 @@ type View = 'board' | 'list'
 export function TasksPage(): React.JSX.Element {
   const tasks = useTasks()
   const remove = useDeleteTask()
+  useScreenContext({ screen: 'tasks' })
   const [view, setView] = React.useState<View>('board')
   const [dialog, setDialog] = React.useState<{ open: boolean; task?: Task; status?: TaskStatus }>({
     open: false

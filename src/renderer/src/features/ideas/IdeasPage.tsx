@@ -21,6 +21,7 @@ import { PillarsDialog } from '@renderer/features/pillars/PillarsDialog'
 import { usePillars } from '@renderer/features/pillars/usePillars'
 import { fmtRelative } from '@renderer/lib/dates'
 import { cn } from '@renderer/lib/utils'
+import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { IdeaDialog } from './IdeaDialog'
 import { useDeleteIdea, useIdeas, useUpdateIdea } from './useIdeas'
 
@@ -125,6 +126,7 @@ export function IdeasPage(): React.JSX.Element {
   const ideas = useIdeas(filter)
   const { data: pillars = [] } = usePillars()
   const remove = useDeleteIdea()
+  useScreenContext({ screen: 'ideas' })
 
   const filters: Array<{ value: StatusFilter; label: string }> = [
     { value: 'active', label: 'Activas' },

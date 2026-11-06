@@ -44,7 +44,8 @@ export function useUpdateSettings(): UseMutationResult<
       if (previous) {
         queryClient.setQueryData<Settings>(settingsKey, {
           appearance: { ...previous.appearance, ...(patch.appearance ?? {}) },
-          general: { ...previous.general, ...(patch.general ?? {}) }
+          general: { ...previous.general, ...(patch.general ?? {}) },
+          ai: { ...previous.ai, ...(patch.ai ?? {}) }
         })
       }
       return { previous }

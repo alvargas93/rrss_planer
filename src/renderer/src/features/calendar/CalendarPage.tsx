@@ -37,6 +37,7 @@ import { Skeleton } from '@renderer/components/ui/skeleton'
 import { usePosts, useSchedulePost } from '@renderer/features/posts/usePosts'
 import { dayKey } from '@renderer/lib/dates'
 import { cn } from '@renderer/lib/utils'
+import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { PostChip } from './PostChip'
 
 type View = 'month' | 'week'
@@ -168,6 +169,7 @@ export function CalendarPage(): React.JSX.Element {
   const [cursor, setCursor] = React.useState(() => new Date())
   const [active, setActive] = React.useState<PostSummary | null>(null)
   const schedule = useSchedulePost()
+  useScreenContext({ screen: 'calendar' })
 
   const { start, end } = rangeFor(view, cursor)
   const scheduled = usePosts({ from: start.toISOString(), to: end.toISOString() })

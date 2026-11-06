@@ -10,6 +10,12 @@ export type AppErrorCode =
   | 'RATE_LIMITED'
   | 'EXTERNAL_API'
   | 'IO'
+  /** Falta configurar algo (p. ej. la clave de API). */
+  | 'NOT_CONFIGURED'
+  /** Se alcanzó el límite mensual de gasto fijado por el usuario. */
+  | 'BUDGET_EXCEEDED'
+  /** El modelo declinó responder por sus políticas de seguridad. */
+  | 'REFUSED'
   | 'UNKNOWN'
 
 export interface SerializedError {
