@@ -133,7 +133,17 @@ export type ModelInfo = z.infer<typeof ModelInfoSchema>
 /** Lo que la interfaz cuenta al asistente sobre la pantalla actual. */
 export const ScreenContextSchema = z.object({
   screen: z
-    .enum(['dashboard', 'ideas', 'tasks', 'calendar', 'composer', 'settings', 'assistant', 'other'])
+    .enum([
+      'dashboard',
+      'ideas',
+      'tasks',
+      'calendar',
+      'composer',
+      'settings',
+      'assistant',
+      'analytics',
+      'other'
+    ])
     .default('other'),
   idea: z
     .object({
@@ -162,7 +172,14 @@ export type ScreenContext = z.infer<typeof ScreenContextSchema>
 
 // ------------------------------------------------------------------ acciones
 
-export const ACTION_KINDS = ['ideas', 'script', 'adapt', 'hashtags', 'weekly_plan'] as const
+export const ACTION_KINDS = [
+  'ideas',
+  'script',
+  'adapt',
+  'hashtags',
+  'weekly_plan',
+  'summary'
+] as const
 export const ActionKindSchema = z.enum(ACTION_KINDS)
 export type ActionKind = z.infer<typeof ActionKindSchema>
 
@@ -171,7 +188,8 @@ export const ACTION_LABELS: Record<ActionKind, string> = {
   script: 'Escribir guion',
   adapt: 'Adaptar a cada red',
   hashtags: 'Sugerir hashtags',
-  weekly_plan: 'Plan semanal'
+  weekly_plan: 'Plan semanal',
+  summary: 'Resumen de métricas'
 }
 
 export const IdeasResultSchema = z.object({
@@ -224,12 +242,21 @@ export const WeeklyPlanResultSchema = z.object({
   )
 })
 
+export const SummaryResultSchema = z.object({
+  headline: z.string().describe('Una frase con lo más importante del periodo'),
+  highlights: z.array(z.string()).describe('3 a 5 datos concretos con cifras'),
+  whatWorked: z.string().describe('Qué tipo de contenido funcionó y por qué'),
+  whatToChange: z.string().describe('Qué dejar de hacer o ajustar'),
+  nextWeekFocus: z.array(z.string()).describe('2 a 4 acciones concretas para la semana que viene')
+})
+
 export const ActionResultSchemas = {
   ideas: IdeasResultSchema,
   script: ScriptResultSchema,
   adapt: AdaptResultSchema,
   hashtags: HashtagsResultSchema,
-  weekly_plan: WeeklyPlanResultSchema
+  weekly_plan: WeeklyPlanResultSchema,
+  summary: SummaryResultSchema
 } as const
 
 export type ActionResult<K extends ActionKind = ActionKind> = z.infer<

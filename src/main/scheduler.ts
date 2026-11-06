@@ -7,6 +7,8 @@ export interface SchedulerDeps {
   runDue: () => Promise<void>
   /** Refresca tokens que caducan pronto. */
   refreshTokens: () => Promise<void>
+  /** Trae las métricas de las cuentas conectadas. */
+  syncAnalytics: () => Promise<void>
 }
 
 /**
@@ -43,6 +45,7 @@ export class Scheduler {
       if (Date.now() - this.lastTokenCheck > 24 * 60 * 60_000) {
         this.lastTokenCheck = Date.now()
         await this.deps.refreshTokens()
+        await this.deps.syncAnalytics()
       }
     } catch (error) {
       log.error('Fallo en el planificador', error instanceof Error ? error.message : error)

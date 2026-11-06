@@ -264,6 +264,54 @@ function WeeklyPlanCard({ result }: { result: ActionResult<'weekly_plan'> }): Re
   )
 }
 
+function SummaryCard({ result }: { result: ActionResult<'summary'> }): React.JSX.Element {
+  const [copied, copy] = useCopy()
+  const text = [
+    result.headline,
+    '',
+    ...result.highlights.map((h) => `• ${h}`),
+    '',
+    `Qué funcionó: ${result.whatWorked}`,
+    `Qué cambiar: ${result.whatToChange}`,
+    '',
+    'Foco de la semana:',
+    ...result.nextWeekFocus.map((f) => `• ${f}`)
+  ].join('\n')
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-sm font-semibold">{result.headline}</p>
+      <ul className="list-disc pl-5 text-sm">
+        {result.highlights.map((h, i) => (
+          <li key={i}>{h}</li>
+        ))}
+      </ul>
+      <section>
+        <p className="text-[11px] font-semibold text-subtle uppercase">Qué funcionó</p>
+        <p className="text-sm">{result.whatWorked}</p>
+      </section>
+      <section>
+        <p className="text-[11px] font-semibold text-subtle uppercase">Qué cambiar</p>
+        <p className="text-sm">{result.whatToChange}</p>
+      </section>
+      <section>
+        <p className="text-[11px] font-semibold text-subtle uppercase">
+          Foco de la semana que viene
+        </p>
+        <ol className="list-decimal pl-5 text-sm">
+          {result.nextWeekFocus.map((f, i) => (
+            <li key={i}>{f}</li>
+          ))}
+        </ol>
+      </section>
+      <div>
+        <Button size="sm" variant="ghost" onClick={() => copy('summary', text)}>
+          {copied === 'summary' ? <Check aria-hidden /> : <Copy aria-hidden />} Copiar
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 /** Dibuja el resultado de una acción con sus botones de aplicar. Valida antes de pintar. */
 export function ActionResultCard({ block }: { block: ActionBlock }): React.JSX.Element {
   const kind: ActionKind = block.kind
@@ -282,6 +330,8 @@ export function ActionResultCard({ block }: { block: ActionBlock }): React.JSX.E
       return <HashtagsCard result={parsed.data as ActionResult<'hashtags'>} />
     case 'weekly_plan':
       return <WeeklyPlanCard result={parsed.data as ActionResult<'weekly_plan'>} />
+    case 'summary':
+      return <SummaryCard result={parsed.data as ActionResult<'summary'>} />
   }
 }
 

@@ -12,6 +12,7 @@ import type { PostVariant } from '@shared/domain/posts'
 import type { ValidationIssue } from '@shared/domain/publishing'
 import { AppError } from '@shared/domain/errors'
 import { InstagramApi } from './instagram.api'
+import { InstagramAnalytics } from './instagram.analytics'
 
 const MB = 1024 * 1024
 const LONG_LIVED_SECONDS = 60 * 24 * 60 * 60
@@ -102,6 +103,7 @@ function kindOf(variant: PostVariant): PostKind {
 
 export class InstagramConnector implements Connector {
   readonly network = 'instagram' as const
+  readonly analytics = new InstagramAnalytics()
 
   capabilities(): Capabilities {
     return INSTAGRAM_CAPABILITIES

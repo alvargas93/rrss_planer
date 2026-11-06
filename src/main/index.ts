@@ -18,6 +18,8 @@ import { MEDIA_FILE_FILTERS, MediaService } from './services/media.service'
 import { DashboardService } from './services/dashboard.service'
 import { AccountsService } from './services/accounts.service'
 import { PublishingService } from './services/publishing.service'
+import { AnalyticsService } from './services/analytics.service'
+import { AnalyticsRepository } from './repositories/analytics.repository'
 import { AiRepository } from './repositories/ai.repository'
 import { AiService } from './ai/ai.service'
 import { SafeStorageSecretStore } from './secrets/secrets.service'
@@ -178,6 +180,8 @@ function bootstrap(): SettingsService {
     copyToClipboard: (text) => clipboard.writeText(text)
   })
 
+  const analytics = new AnalyticsService(new AnalyticsRepository(db), accounts, connectors, targets)
+
   registerAllIpc({
     settings,
     pillars,
@@ -190,13 +194,15 @@ function bootstrap(): SettingsService {
     accounts,
     publishing,
     secrets,
-    mediaHost
+    mediaHost,
+    analytics
   })
   handleMediaProtocol(getMediaDir())
 
   scheduler = new Scheduler({
     runDue: () => publishing.runDue(),
-    refreshTokens: () => accounts.refreshExpiring()
+    refreshTokens: () => accounts.refreshExpiring(),
+    syncAnalytics: () => analytics.syncAll().then(() => undefined)
   })
   return settings
 }

@@ -42,6 +42,16 @@ export class TargetsRepository {
       .map(toTarget)
   }
 
+  /** Destinos publicados por API desde una cuenta (para enlazar métricas con posts). */
+  listPublishedByAccount(accountId: string): PostTarget[] {
+    return this.db
+      .select()
+      .from(postTargets)
+      .where(and(eq(postTargets.accountId, accountId), eq(postTargets.status, 'published')))
+      .all()
+      .map(toTarget)
+  }
+
   listByPosts(postIds: string[]): PostTarget[] {
     if (postIds.length === 0) return []
     return this.db

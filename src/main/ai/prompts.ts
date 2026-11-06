@@ -37,6 +37,7 @@ export function describeContext(context: ScreenContext): string {
     composer: 'Compositor de publicaciones',
     settings: 'Ajustes',
     assistant: 'Asistente',
+    analytics: 'Analítica',
     other: 'otra'
   }
   parts.push(`Pantalla actual: ${screenLabel[context.screen]}.`)
@@ -92,6 +93,8 @@ export function buildActionPrompt(
     }
     case 'hashtags':
       return `Sugiere entre 10 y 20 hashtags para el contenido en pantalla, ordenados de más a menos relevante, mezclando amplios y de nicho, sin genéricos vacíos (#love, #instagood). ${source}${extra}`
+    case 'summary':
+      return `Escribe un resumen semanal de rendimiento a partir de las métricas que hay en el contexto ("Información adicional"). Sé concreto: cifras, variaciones y qué publicaciones funcionaron. Si faltan métricas, dilo sin inventar. Termina con acciones realistas para la semana que viene.${extra}`
     case 'weekly_plan':
       return `Propón un plan de publicaciones para la semana que viene (lunes = día 0), entre 4 y 7 piezas, repartidas entre las redes y equilibrando los pilares de contenido. Cada pieza con red, formato, título y un esbozo de dos frases. Horas razonables en hora local. ${source}${extra}`
   }
@@ -104,7 +107,8 @@ export function describeActionRequest(kind: ActionKind, instruction: string): st
     script: 'Escribir guion',
     adapt: 'Adaptar a cada red',
     hashtags: 'Sugerir hashtags',
-    weekly_plan: 'Plan semanal'
+    weekly_plan: 'Plan semanal',
+    summary: 'Resumen de métricas'
   }
   return instruction.trim() ? `${labels[kind]}: ${instruction.trim()}` : labels[kind]
 }

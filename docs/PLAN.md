@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 5 · 2026-11-06 · Fase 4 completada
+> Versión 6 · 2026-11-06 · Fase 5 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -311,6 +311,27 @@ Ficha completa verificada: `docs/connectors/instagram.md`.
   1.91:1, vídeo 3 s–15 min, pies de 2200 caracteres y 30 hashtags). La conversión
   automática de PNG/WebP a JPEG queda para la Fase 6 (FFmpeg).
 - **Confirmación explícita** antes de "Publicar ahora". Nada se publica sin pulsar el botón.
+
+### 5.4 Decisiones aplicadas en Fase 5 (analítica)
+
+- **Métricas verificadas** (docs/connectors/instagram.md §5): por cuenta `reach` (con serie
+  histórica), `views`, `likes`, `comments`, `saves`, `shares`, `total_interactions`,
+  `profile_links_taps` (solo totales por rango, así que la app pide un día cada vez) y
+  seguidores desde la identidad. Por publicación: `reach`, `saved`, `shares`, `likes`,
+  `comments`, `total_interactions`, `views` y tiempo medio en reels. Carruseles e
+  historias no devuelven insights.
+- **Las series se construyen en local**: primera carga de 14 días y después los dos últimos
+  días cada 24 h (Instagram puede retrasar datos 48 h). Tabla `metrics_snapshots` con una
+  fila por (cuenta, ámbito, medio, métrica, día); `remote_media` con las últimas 25
+  publicaciones de la cuenta, incluidas las hechas fuera de la app.
+- **Métricas no disponibles** (p. ej. cuentas con menos de 100 seguidores) se detectan por
+  el error de la API y se recuerdan para no insistir; la interfaz las marca.
+- **Gráficos** (Recharts) de una sola serie con el acento de la app, barras de ≤ 24 px,
+  rejilla fina, tooltip, sin segundo eje; tarjetas de cifra con variación frente al
+  periodo anterior; mejores publicaciones con enlace a la red y al post local.
+- **Resumen semanal con Claude**: acción `summary` con salida estructurada (titular,
+  datos destacados, qué funcionó, qué cambiar, foco de la semana) a partir de un
+  texto compacto de métricas que la pantalla pasa como contexto.
 
 ## 6. Diseño
 

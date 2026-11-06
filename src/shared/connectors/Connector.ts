@@ -68,6 +68,47 @@ export interface ConnectedIdentity {
   meta: Record<string, unknown>
 }
 
+export interface MetricPoint {
+  metric: string
+  /** YYYY-MM-DD en hora local. */
+  day: string
+  value: number
+}
+
+export interface RemoteMediaItem {
+  externalId: string
+  mediaType: string
+  productType: string
+  caption: string
+  permalink: string | null
+  thumbnailUrl: string | null
+  publishedAt: string
+  likeCount: number
+  commentsCount: number
+}
+
+export interface AnalyticsFetch {
+  /** Métricas diarias de la cuenta entre dos días (inclusive). */
+  accountDaily(input: {
+    accessToken: string
+    account: Account
+    fromDay: string
+    toDay: string
+  }): Promise<{ points: MetricPoint[]; unavailable: string[] }>
+  /** Publicaciones recientes de la cuenta con sus contadores básicos. */
+  recentMedia(input: {
+    accessToken: string
+    account: Account
+    limit: number
+  }): Promise<RemoteMediaItem[]>
+  /** Insights acumulados de una publicación. */
+  mediaInsights(input: {
+    accessToken: string
+    account: Account
+    item: RemoteMediaItem
+  }): Promise<Record<string, number>>
+}
+
 /**
  * Interfaz común de conector. Cada red la implementa en src/main/connectors/<red>/.
  * El resto de la app solo conoce esta forma.
@@ -82,4 +123,6 @@ export interface Connector {
   /** Valida sin red: longitud, formatos, tamaños. */
   validate(variant: PostVariant, media: MediaAsset[]): ValidationIssue[]
   publish(input: PublishInput): Promise<PublishResult>
+  /** Lectura de métricas; ausente si la red no las ofrece por API. */
+  analytics?: AnalyticsFetch
 }

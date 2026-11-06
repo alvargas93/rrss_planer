@@ -1,4 +1,4 @@
-import { integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, primaryKey, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 /**
  * Esquema de la base de datos (Drizzle). Cada fase añade sus tablas aquí y genera
@@ -229,6 +229,78 @@ export const postTargets = sqliteTable('post_targets', {
   lastError: text('last_error'),
   nextAttemptAt: text('next_attempt_at'),
   ...timestamps
+})
+
+// ---------------------------------------------------------------- Fase 5
+
+/**
+ * Métricas por día y por publicación. Una fila por (cuenta, ámbito, medio, métrica, día).
+ * `scope` account: métrica diaria de la cuenta (reach, views, seguidores…).
+ * `scope` media: valor acumulado de una publicación en la fecha de captura.
+ */
+export const metricsSnapshots = sqliteTable(
+  'metrics_snapshots',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    /** account | media */
+    scope: text('scope').notNull(),
+    /** Id del medio en la red (solo scope media). Cadena vacía para la cuenta. */
+    externalMediaId: text('external_media_id').notNull().default(''),
+    metric: text('metric').notNull(),
+    /** Día al que se refiere el valor, YYYY-MM-DD (hora local). */
+    day: text('day').notNull(),
+    value: real('value').notNull(),
+    capturedAt: text('captured_at').notNull()
+  },
+  (table) => [
+    uniqueIndex('metrics_unique').on(
+      table.accountId,
+      table.scope,
+      table.externalMediaId,
+      table.metric,
+      table.day
+    )
+  ]
+)
+
+/** Publicaciones recientes de la cuenta leídas de la red (incluye las hechas fuera de la app). */
+export const remoteMedia = sqliteTable(
+  'remote_media',
+  {
+    id: text('id').primaryKey(),
+    accountId: text('account_id')
+      .notNull()
+      .references(() => accounts.id, { onDelete: 'cascade' }),
+    externalId: text('external_id').notNull(),
+    /** IMAGE | VIDEO | CAROUSEL_ALBUM */
+    mediaType: text('media_type').notNull().default(''),
+    /** FEED | REELS | STORY | AD */
+    productType: text('product_type').notNull().default(''),
+    caption: text('caption').notNull().default(''),
+    permalink: text('permalink'),
+    thumbnailUrl: text('thumbnail_url'),
+    publishedAt: text('published_at').notNull(),
+    likeCount: integer('like_count').notNull().default(0),
+    commentsCount: integer('comments_count').notNull().default(0),
+    /** Id del post local si lo publicó la app (para enlazarlo). */
+    postId: text('post_id'),
+    ...timestamps
+  },
+  (table) => [uniqueIndex('remote_media_unique').on(table.accountId, table.externalId)]
+)
+
+/** Registro de sincronizaciones de métricas por cuenta. */
+export const analyticsSyncs = sqliteTable('analytics_syncs', {
+  accountId: text('account_id')
+    .primaryKey()
+    .references(() => accounts.id, { onDelete: 'cascade' }),
+  lastSyncAt: text('last_sync_at').notNull(),
+  lastError: text('last_error'),
+  /** Métricas que la red rechazó la última vez (p. ej. por pocos seguidores). */
+  unavailableJson: text('unavailable_json').notNull().default('[]')
 })
 
 /** Medios adjuntos a una publicación, con orden. */

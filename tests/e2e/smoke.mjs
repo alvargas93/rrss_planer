@@ -100,7 +100,7 @@ const MESES = [
   check((await theme(win)) === 'dark', 'tema oscuro aplicado al pulsar')
   await win.screenshot({ path: join(shots, '03-ajustes-oscuro.png') })
 
-  await go(win, 'Analítica', 'text=llega en la Fase 5')
+  await go(win, 'Vídeo', 'text=llega en la Fase 6')
   check(true, 'sección futura muestra pantalla "pronto"')
 
   await win.keyboard.press('Tab')
@@ -298,6 +298,12 @@ const MESES = [
   await go(win, 'Ajustes', 'text=Apariencia')
   await win.getByText('Alojamiento temporal de medios').waitFor()
   check(true, 'ajustes: tarjeta de publicación con alojamiento de medios')
+
+  // Fase 5: analítica sin cuentas muestra el estado vacío y enlaza a Cuentas
+  await go(win, 'Analítica', 'text=Métricas de tus cuentas conectadas')
+  await win.getByRole('link', { name: 'Ir a Cuentas' }).waitFor()
+  check(true, 'analítica: estado vacío sin cuentas conectadas')
+  await win.screenshot({ path: join(shots, '40-analitica-vacia.png') })
 
   check(errors.length === 0, `sin errores de consola en la sesión 4 (${errors.length})`)
   if (errors.length) console.log(errors.join('\n'))

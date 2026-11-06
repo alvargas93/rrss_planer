@@ -13,6 +13,7 @@ import type { PostsRepository } from '../repositories/posts.repository'
 import type { AiService } from '../ai/ai.service'
 import type { AccountsService } from '../services/accounts.service'
 import type { PublishingService } from '../services/publishing.service'
+import type { AnalyticsService } from '../services/analytics.service'
 import type { SecretStore } from '../secrets/secrets.service'
 import type { MediaHost } from '../media-host/media-host'
 import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
@@ -35,6 +36,7 @@ export interface IpcDependencies {
   publishing: PublishingService
   secrets: SecretStore
   mediaHost: () => MediaHost
+  analytics: AnalyticsService
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -148,6 +150,13 @@ export function registerAllIpc(deps: IpcDependencies): void {
 
   // --- dashboard ---
   handle('dashboard:summary', () => deps.dashboard.summary())
+
+  // --- analítica ---
+  handle('analytics:overview', (query) => deps.analytics.overview(query))
+  handle('analytics:sync', ({ accountId }) =>
+    accountId ? deps.analytics.sync(accountId).then((r) => [r]) : deps.analytics.syncAll()
+  )
+  handle('analytics:digest', (query) => ({ text: deps.analytics.digest(query) }))
 
   // --- Claude ---
   handle('ai:status', () => deps.ai.status())

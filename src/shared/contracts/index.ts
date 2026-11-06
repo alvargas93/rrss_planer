@@ -39,6 +39,11 @@ import {
   ValidationIssueSchema
 } from '../domain/publishing'
 import { CapabilitiesSchema } from '../connectors/Connector'
+import {
+  AnalyticsOverviewSchema,
+  AnalyticsQuerySchema,
+  SyncResultSchema
+} from '../domain/analytics'
 import { NETWORKS } from '../connectors/networks'
 
 const ById = z.object({ id: IdSchema })
@@ -154,7 +159,15 @@ export const contracts = {
   /** Envía un mensaje; la respuesta llega por streaming (evento ai:stream) y al final completa. */
   'ai:chat': { input: ChatRequestSchema, output: AiMessageSchema },
   /** Ejecuta una acción con salida estructurada (ideas, guion, adaptar…). */
-  'ai:runAction': { input: ActionRequestSchema, output: AiMessageSchema }
+  'ai:runAction': { input: ActionRequestSchema, output: AiMessageSchema },
+
+  // --- analítica ---
+  'analytics:overview': { input: AnalyticsQuerySchema, output: AnalyticsOverviewSchema },
+  'analytics:sync': {
+    input: z.object({ accountId: IdSchema.optional() }),
+    output: z.array(SyncResultSchema)
+  },
+  'analytics:digest': { input: AnalyticsQuerySchema, output: z.object({ text: z.string() }) }
 } as const
 
 export type Contracts = typeof contracts
