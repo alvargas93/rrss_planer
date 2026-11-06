@@ -1,0 +1,31 @@
+# Dependencias y builds
+node_modules/
+out/
+dist/
+release/
+.vite/
+
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+
+# Datos locales
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+media/
+
+# Sistema y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs y temporales
+*.log
+npm-debug.log*
+coverage/
+tmp/
