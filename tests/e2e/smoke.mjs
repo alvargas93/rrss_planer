@@ -240,6 +240,7 @@ const MESES = [
   await win.getByRole('button', { name: 'Abrir asistente' }).click()
   const panel = win.getByRole('complementary', { name: 'Asistente' })
   await panel.getByText('Conecta tu clave de Anthropic').waitFor()
+  await win.waitForTimeout(400) // fin de la animación del panel
   check(true, 'panel del asistente abierto y pide la clave')
   await win.screenshot({ path: join(shots, '20-asistente-sin-clave.png') })
   await win.keyboard.press('Escape')
@@ -258,6 +259,7 @@ const MESES = [
   // Con clave, el panel ofrece las acciones; sin red real, una acción devuelve error claro
   await win.getByRole('button', { name: 'Abrir asistente' }).click()
   await panel.getByRole('button', { name: 'Generar ideas' }).waitFor()
+  await win.waitForTimeout(400) // fin de la animación del panel
   check(true, 'panel muestra acciones rápidas con clave configurada')
   await win.screenshot({ path: join(shots, '22-asistente-listo.png') })
   await win.keyboard.press('Escape')
