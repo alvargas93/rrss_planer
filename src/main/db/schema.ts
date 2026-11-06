@@ -179,6 +179,58 @@ export const aiUsage = sqliteTable('ai_usage', {
   createdAt: text('created_at').notNull()
 })
 
+// ---------------------------------------------------------------- Fase 4
+
+/** Cuentas de redes conectadas. El token vive cifrado en `secrets` (clave `secretKey`). */
+export const accounts = sqliteTable('accounts', {
+  id: text('id').primaryKey(),
+  /** instagram | linkedin | x | youtube */
+  network: text('network').notNull(),
+  /** Id de la cuenta en la red (p. ej. IG user id). */
+  externalId: text('external_id').notNull(),
+  username: text('username').notNull(),
+  displayName: text('display_name').notNull().default(''),
+  avatarUrl: text('avatar_url'),
+  /** business | creator | personal | unknown */
+  accountType: text('account_type').notNull().default('unknown'),
+  /** connected | expiring | expired | revoked | error */
+  status: text('status').notNull().default('connected'),
+  scopesJson: text('scopes_json').notNull().default('[]'),
+  tokenExpiresAt: text('token_expires_at'),
+  tokenRefreshedAt: text('token_refreshed_at'),
+  secretKey: text('secret_key').notNull(),
+  lastError: text('last_error'),
+  /** Datos extra de la red (followers_count, media_count…). */
+  metaJson: text('meta_json').notNull().default('{}'),
+  ...timestamps,
+  ...softDelete
+})
+
+/** A qué cuenta va cada variante de una publicación y en qué estado está. */
+export const postTargets = sqliteTable('post_targets', {
+  id: text('id').primaryKey(),
+  postId: text('post_id')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  variantId: text('variant_id')
+    .notNull()
+    .references(() => postVariants.id, { onDelete: 'cascade' }),
+  accountId: text('account_id').references(() => accounts.id, { onDelete: 'set null' }),
+  network: text('network').notNull(),
+  /** api | manual */
+  mode: text('mode').notNull().default('api'),
+  /** pending | queued | publishing | published | failed | manual_notified | cancelled */
+  status: text('status').notNull().default('pending'),
+  scheduledAt: text('scheduled_at'),
+  externalPostId: text('external_post_id'),
+  externalUrl: text('external_url'),
+  publishedAt: text('published_at'),
+  attempts: integer('attempts').notNull().default(0),
+  lastError: text('last_error'),
+  nextAttemptAt: text('next_attempt_at'),
+  ...timestamps
+})
+
 /** Medios adjuntos a una publicación, con orden. */
 export const postMedia = sqliteTable(
   'post_media',

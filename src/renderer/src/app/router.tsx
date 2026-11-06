@@ -7,6 +7,7 @@ import { TasksPage } from '@renderer/features/tasks/TasksPage'
 import { CalendarPage } from '@renderer/features/calendar/CalendarPage'
 import { ComposerPage } from '@renderer/features/composer/ComposerPage'
 import { AssistantPage } from '@renderer/features/ai/AssistantPage'
+import { AccountsPage } from '@renderer/features/accounts/AccountsPage'
 import { PlaceholderPage } from '@renderer/features/placeholder/PlaceholderPage'
 import { CURRENT_PHASE, mainNav } from './navigation'
 
@@ -27,6 +28,7 @@ export const router = createMemoryRouter([
       { path: 'compose', element: <ComposerPage /> },
       { path: 'compose/:id', element: <ComposerPage /> },
       { path: 'assistant', element: <AssistantPage /> },
+      { path: 'accounts', element: <AccountsPage /> },
       ...mainNav
         .filter((item) => item.phase > CURRENT_PHASE)
         .map((item) => ({

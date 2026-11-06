@@ -88,7 +88,8 @@ export class PostsRepository {
         ...toPost(row),
         networks: variants.filter((v) => v.postId === row.id).map((v) => v.network as Network),
         mediaCount: postMediaRows.length,
-        thumbnailUrl: first ? toMediaAsset(first.asset).url : null
+        thumbnailUrl: first ? toMediaAsset(first.asset).url : null,
+        targets: []
       }
     })
   }
@@ -117,7 +118,7 @@ export class PostsRepository {
       .orderBy(asc(postMedia.sortOrder))
       .all()
       .map((m) => toMediaAsset(m.asset))
-    return { post: toPost(row), variants, media }
+    return { post: toPost(row), variants, media, targets: [] }
   }
 
   create(input: PostCreate): PostDetail {
@@ -187,6 +188,11 @@ export class PostsRepository {
   delete(id: string): void {
     this.getRow(id)
     this.db.update(posts).set({ deletedAt: nowIso() }).where(eq(posts.id, id)).run()
+  }
+
+  /** Lo usa la cola de publicación para reflejar el estado real de los destinos. */
+  setStatus(id: string, status: PostStatus): void {
+    this.db.update(posts).set({ status, updatedAt: nowIso() }).where(eq(posts.id, id)).run()
   }
 
   countByStatus(status: PostStatus): number {

@@ -100,7 +100,7 @@ const MESES = [
   check((await theme(win)) === 'dark', 'tema oscuro aplicado al pulsar')
   await win.screenshot({ path: join(shots, '03-ajustes-oscuro.png') })
 
-  await go(win, 'Cuentas', 'text=llega en la Fase 4')
+  await go(win, 'Analítica', 'text=llega en la Fase 5')
   check(true, 'sección futura muestra pantalla "pronto"')
 
   await win.keyboard.press('Tab')
@@ -177,6 +177,16 @@ const MESES = [
   await win.getByRole('button', { name: 'Guardar borrador' }).click()
   await win.getByText('Borrador', { exact: true }).waitFor()
   check(true, 'borrador guardado')
+  // Fase 4: el panel de publicación aparece con el destino en modo manual (sin cuenta)
+  const targetSelect = win.getByRole('combobox', { name: 'Cuenta de destino para Instagram' })
+  await targetSelect.waitFor()
+  const selectText = await targetSelect.innerText()
+  check(
+    selectText.includes('Manual'),
+    `destino de Instagram en modo manual sin cuenta (${selectText.trim()})`
+  )
+  await win.getByText(/necesita al menos 1 archivo/).waitFor()
+  check(true, 'validación de Instagram avisa de que falta el medio')
   await win.screenshot({ path: join(shots, '12-compositor.png') })
 
   // Calendario: el borrador aparece en la bandeja y se arrastra a hoy
@@ -271,6 +281,23 @@ const MESES = [
   // Página del asistente a pantalla completa
   await go(win, 'Asistente', 'text=Claude conoce tus pilares')
   check(true, 'página del asistente disponible')
+
+  // Fase 4: cuentas y publicación
+  await go(win, 'Cuentas', 'text=Sin cuentas conectadas')
+  await win.getByText('Falta el alojamiento de medios').waitFor()
+  check(true, 'cuentas: aviso de alojamiento de medios sin configurar')
+  await win.getByText('Qué permite Instagram por API').waitFor()
+  check(true, 'cuentas: capacidades verificadas de Instagram visibles')
+  await win.getByRole('button', { name: 'Conectar Instagram' }).first().click()
+  await win.getByRole('dialog').getByText('Generate token').waitFor()
+  check(true, 'diálogo de conexión con instrucciones del token')
+  await win.screenshot({ path: join(shots, '30-cuentas-conectar.png') })
+  await win.keyboard.press('Escape')
+  await win.screenshot({ path: join(shots, '31-cuentas.png') })
+
+  await go(win, 'Ajustes', 'text=Apariencia')
+  await win.getByText('Alojamiento temporal de medios').waitFor()
+  check(true, 'ajustes: tarjeta de publicación con alojamiento de medios')
 
   check(errors.length === 0, `sin errores de consola en la sesión 4 (${errors.length})`)
   if (errors.length) console.log(errors.join('\n'))

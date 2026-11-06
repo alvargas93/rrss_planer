@@ -33,6 +33,8 @@ import { useUpdateMedia } from '@renderer/features/media/useMedia'
 import { fromDateTimeLocal, toDateTimeLocal } from '@renderer/lib/dates'
 import { cn } from '@renderer/lib/utils'
 import { NetworkPreview } from './NetworkPreview'
+import type { PostTarget } from '@shared/domain/publishing'
+import { PublishPanel } from '@renderer/features/publishing/PublishPanel'
 import { usePillars } from '@renderer/features/pillars/usePillars'
 import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { useComposerBridge, type ComposerInsert } from '@renderer/features/ai/stores'
@@ -155,6 +157,7 @@ export function ComposerPage(): React.JSX.Element {
         postId={id}
         status={detail.data.post.status}
         initial={fromDetail(detail.data)}
+        targets={detail.data.targets}
       />
     )
   }
@@ -182,11 +185,13 @@ export function ComposerPage(): React.JSX.Element {
 function ComposerForm({
   postId,
   status,
-  initial
+  initial,
+  targets = []
 }: {
   postId: string | undefined
   status: PostStatus | undefined
   initial: FormState
+  targets?: PostTarget[]
 }): React.JSX.Element {
   const navigate = useNavigate()
   const create = useCreatePost()
@@ -590,6 +595,17 @@ function ComposerForm({
           ) : (
             <div className="rounded-xl border border-dashed border-border-strong p-6 text-center text-sm text-muted">
               Activa una red para ver cómo quedará la publicación.
+            </div>
+          )}
+          {postId && (
+            <div className="mt-4">
+              <PublishPanel
+                postId={postId}
+                targets={targets}
+                networks={NETWORKS.filter((n) => form.variants[n])}
+                dirty={dirty}
+                scheduledAt={form.scheduledAt}
+              />
             </div>
           )}
         </aside>

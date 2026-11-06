@@ -25,22 +25,38 @@ export const GeneralSettingsSchema = z.object({
   keepRunningInTray: z.boolean().default(true)
 })
 
+/** Publicación: alojamiento temporal de medios y datos públicos de las apps de cada red. */
+export const PublishingSettingsSchema = z.object({
+  /** none = modo manual; cloudinary = subir, publicar y borrar. */
+  mediaHost: z.enum(['none', 'cloudinary']).default('none'),
+  cloudinaryCloudName: z.string().trim().default(''),
+  cloudinaryApiKey: z.string().trim().default(''),
+  /** Instagram App ID (público); el secreto va cifrado en `secrets`. */
+  instagramAppId: z.string().trim().default(''),
+  /** Avisos del sistema al publicar o fallar. */
+  notifyOnPublish: z.boolean().default(true),
+  /** Minutos de antelación del aviso en modo manual. */
+  manualNoticeMinutes: z.number().int().min(0).max(1440).default(10)
+})
+
 export const SettingsSchema = z.object({
   appearance: AppearanceSettingsSchema.default(() => AppearanceSettingsSchema.parse({})),
   general: GeneralSettingsSchema.default(() => GeneralSettingsSchema.parse({})),
-  ai: AiSettingsSchema.default(() => AiSettingsSchema.parse({}))
+  ai: AiSettingsSchema.default(() => AiSettingsSchema.parse({})),
+  publishing: PublishingSettingsSchema.default(() => PublishingSettingsSchema.parse({}))
 })
 
 export type Settings = z.infer<typeof SettingsSchema>
 export type SettingsSection = keyof Settings
 
-export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'general', 'ai']
+export const SETTINGS_SECTIONS: SettingsSection[] = ['appearance', 'general', 'ai', 'publishing']
 
 /** Parche parcial: cualquier subconjunto de claves de cualquier sección. */
 export const SettingsPatchSchema = z.object({
   appearance: AppearanceSettingsSchema.partial().optional(),
   general: GeneralSettingsSchema.partial().optional(),
-  ai: AiSettingsSchema.partial().optional()
+  ai: AiSettingsSchema.partial().optional(),
+  publishing: PublishingSettingsSchema.partial().optional()
 })
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>
 
@@ -51,6 +67,7 @@ export function applySettingsPatch(current: Settings, patch: SettingsPatch): Set
   return SettingsSchema.parse({
     appearance: { ...current.appearance, ...(patch.appearance ?? {}) },
     general: { ...current.general, ...(patch.general ?? {}) },
-    ai: { ...current.ai, ...(patch.ai ?? {}) }
+    ai: { ...current.ai, ...(patch.ai ?? {}) },
+    publishing: { ...current.publishing, ...(patch.publishing ?? {}) }
   })
 }

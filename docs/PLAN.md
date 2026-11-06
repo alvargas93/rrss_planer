@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 4 · 2026-11-06 · Fase 3 completada
+> Versión 5 · 2026-11-06 · Fase 4 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -287,6 +287,30 @@ para que la copia de seguridad sea completa).
   publica ni borra.
 - Las acciones "subtítulos" y "resumen de métricas" se añaden en las Fases 6 y 5, cuando
   exista la fuente de datos.
+
+### 5.3 Decisiones aplicadas en Fase 4 (Instagram)
+
+Ficha completa verificada: `docs/connectors/instagram.md`.
+
+- **Instagram API con Instagram Login** (sin página de Facebook). Acceso Standard con la
+  cuenta propia añadida como cuenta de prueba en la app de Meta; sin App Review en v1.
+- **Dos formas de conectar:** pegar el token de 60 días que genera el App Dashboard
+  (camino principal) o Business Login (OAuth) con servidor local en el puerto 47821
+  (experimental: Meta no documenta si acepta `http://localhost`). El token se guarda cifrado
+  y se renueva solo cuando quedan menos de 10 días.
+- **Alojamiento temporal de medios obligatorio:** Instagram descarga los archivos desde una
+  URL pública y con Instagram Login no hay subida directa. Interfaz `MediaHost` con
+  Cloudinary (plan gratuito, autenticación básica, se sube → publica → borra). Sin él, las
+  publicaciones con archivos van en **modo manual**: aviso a la hora con el texto copiado.
+- **Destinos de publicación (`post_targets`):** una fila por red y publicación, con cuenta
+  asignada, modo (api/manual), estado, reintentos (2, 10 y 30 min, máximo 3) y enlace al
+  resultado. El estado del post se deriva de sus destinos (publicada, parcial, fallida…).
+- **Planificador** cada minuto dentro de la app; con la ventana cerrada sigue en la bandeja
+  del sistema. Lo atrasado más de 24 h no se publica solo: se marca para revisión.
+- **Validación previa** con las reglas verificadas de la red (JPEG, 8 MB, proporción 4:5 a
+  1.91:1, vídeo 3 s–15 min, pies de 2200 caracteres y 30 hashtags). La conversión
+  automática de PNG/WebP a JPEG queda para la Fase 6 (FFmpeg).
+- **Confirmación explícita** antes de "Publicar ahora". Nada se publica sin pulsar el botón.
 
 ## 6. Diseño
 

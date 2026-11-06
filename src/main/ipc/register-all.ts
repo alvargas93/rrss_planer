@@ -2,6 +2,7 @@ import { app, shell } from 'electron'
 import { handle } from './registry'
 import { AppError } from '@shared/domain/errors'
 import type { AppInfo } from '@shared/domain/app-info'
+import type { PostDetail } from '@shared/domain/posts'
 import type { SettingsService } from '../services/settings.service'
 import type { TasksService } from '../services/tasks.service'
 import type { MediaService } from '../services/media.service'
@@ -10,7 +11,16 @@ import type { PillarsRepository } from '../repositories/pillars.repository'
 import type { IdeasRepository } from '../repositories/ideas.repository'
 import type { PostsRepository } from '../repositories/posts.repository'
 import type { AiService } from '../ai/ai.service'
+import type { AccountsService } from '../services/accounts.service'
+import type { PublishingService } from '../services/publishing.service'
+import type { SecretStore } from '../secrets/secrets.service'
+import type { MediaHost } from '../media-host/media-host'
 import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
+
+export const PUBLISHING_SECRET_KEYS = {
+  cloudinaryApiSecret: 'cloudinary.apiSecret',
+  instagramAppSecret: 'instagram.appSecret'
+} as const
 
 export interface IpcDependencies {
   settings: SettingsService
@@ -21,6 +31,10 @@ export interface IpcDependencies {
   media: MediaService
   dashboard: DashboardService
   ai: AiService
+  accounts: AccountsService
+  publishing: PublishingService
+  secrets: SecretStore
+  mediaHost: () => MediaHost
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -74,12 +88,57 @@ export function registerAllIpc(deps: IpcDependencies): void {
   handle('tasks:delete', ({ id }) => deps.tasks.delete(id))
 
   // --- posts ---
-  handle('posts:list', (filter) => deps.posts.list(filter))
-  handle('posts:get', ({ id }) => deps.posts.get(id))
-  handle('posts:create', (input) => deps.posts.create(input))
-  handle('posts:update', ({ id, patch }) => deps.posts.update(id, patch))
-  handle('posts:schedule', ({ id, scheduledAt }) => deps.posts.schedule(id, scheduledAt))
+  const detailWithTargets = (id: string): PostDetail => ({
+    ...deps.posts.get(id),
+    targets: deps.publishing.syncTargets(id)
+  })
+  handle('posts:list', (filter) => deps.publishing.withTargets(deps.posts.list(filter)))
+  handle('posts:get', ({ id }) => detailWithTargets(id))
+  handle('posts:create', (input) => detailWithTargets(deps.posts.create(input).post.id))
+  handle('posts:update', ({ id, patch }) => detailWithTargets(deps.posts.update(id, patch).post.id))
+  handle('posts:schedule', ({ id, scheduledAt }) => {
+    deps.posts.schedule(id, scheduledAt)
+    deps.publishing.syncTargets(id)
+    return deps.publishing.withTargets([deps.posts.summary(id)])[0]!
+  })
   handle('posts:delete', ({ id }) => deps.posts.delete(id))
+
+  // --- cuentas ---
+  handle('accounts:list', () => deps.accounts.list())
+  handle('accounts:connectInstagramToken', ({ accessToken }) =>
+    deps.accounts.connectInstagramWithToken(accessToken)
+  )
+  handle('accounts:connectInstagramOAuth', async ({ appId, appSecret }) => {
+    deps.secrets.set(PUBLISHING_SECRET_KEYS.instagramAppSecret, appSecret)
+    deps.settings.update({ publishing: { instagramAppId: appId } })
+    return deps.accounts.connectInstagramOAuth({ appId, appSecret })
+  })
+  handle('accounts:refresh', ({ id }) => deps.accounts.refresh(id))
+  handle('accounts:disconnect', ({ id }) => deps.accounts.disconnect(id))
+  handle('accounts:capabilities', ({ network }) => deps.accounts.capabilities(network))
+
+  // --- publicación ---
+  handle('publishing:setTarget', (input) => deps.publishing.setTarget(input))
+  handle('publishing:publishNow', ({ postId, targetId }) =>
+    deps.publishing.publishNow(postId, targetId)
+  )
+  handle('publishing:validate', ({ id }) => deps.publishing.validate(id))
+  handle('publishing:retry', ({ targetId }) => deps.publishing.retry(targetId))
+  handle('publishing:cancel', ({ targetId }) => deps.publishing.cancel(targetId))
+  handle('publishing:hostStatus', () => {
+    const host = deps.mediaHost()
+    return {
+      kind: host.kind,
+      configured: host.isConfigured(),
+      hasSecret: deps.secrets.has(PUBLISHING_SECRET_KEYS.cloudinaryApiSecret)
+    }
+  })
+  handle('publishing:setCloudinarySecret', ({ apiSecret }) => {
+    deps.secrets.set(PUBLISHING_SECRET_KEYS.cloudinaryApiSecret, apiSecret)
+  })
+  handle('publishing:setInstagramAppSecret', ({ appSecret }) => {
+    deps.secrets.set(PUBLISHING_SECRET_KEYS.instagramAppSecret, appSecret)
+  })
 
   // --- media ---
   handle('media:import', () => deps.media.import())

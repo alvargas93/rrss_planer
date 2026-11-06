@@ -24,6 +24,7 @@ import {
 import { useAppInfo, useResetSettings, useSettings, useUpdateSettings } from './useSettings'
 import { AccentSamples } from './AccentSamples'
 import { AiSettingsCard } from './AiSettingsCard'
+import { PublishingSettingsCard } from './PublishingSettingsCard'
 
 function Row({
   label,
@@ -174,6 +175,8 @@ export function SettingsPage(): React.JSX.Element {
         </Card>
 
         <AiSettingsCard settings={settings} />
+
+        <PublishingSettingsCard settings={settings} />
 
         <Card>
           <CardHeader>

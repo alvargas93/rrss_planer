@@ -90,6 +90,18 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - Las pruebas del servicio usan un cliente falso (`tests/unit/ai.test.ts`); no se llama a
   la API real en tests ni en la prueba de humo.
 
+## Conectores (Fase 4+)
+
+- Cada red implementa `Connector` (`src/shared/connectors/Connector.ts`) en
+  `src/main/connectors/<red>/` y se registra en `connectors/registry.ts`.
+- Antes de programar un conector: ficha verificada en `docs/connectors/<red>.md` con fecha.
+- Las capacidades (`capabilities()`) son la única fuente de verdad para validar antes de
+  publicar; no se duplican límites en la interfaz.
+- Los tokens van en `secrets` (safeStorage) con clave `account.<red>.<id externo>`; el
+  renderer nunca recibe tokens ni secretos de apps.
+- Publicar pasa siempre por `PublishingService` (destinos, reintentos, modo manual,
+  alojamiento temporal con `MediaHost`). Los tests usan dobles; nunca llaman a las APIs.
+
 ## Notas de entorno
 
 - En Windows, el alias `python` de la Microsoft Store se cuelga: no usarlo en scripts.

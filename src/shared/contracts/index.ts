@@ -26,6 +26,21 @@ import {
   UsageSummarySchema
 } from '../domain/ai'
 
+import {
+  AccountByIdSchema,
+  AccountSchema,
+  InstagramOAuthConnectSchema,
+  InstagramTokenConnectSchema
+} from '../domain/accounts'
+import {
+  PostTargetSchema,
+  PublishNowSchema,
+  SetTargetSchema,
+  ValidationIssueSchema
+} from '../domain/publishing'
+import { CapabilitiesSchema } from '../connectors/Connector'
+import { NETWORKS } from '../connectors/networks'
+
 const ById = z.object({ id: IdSchema })
 
 /**
@@ -75,6 +90,43 @@ export const contracts = {
   'media:delete': { input: ById, output: z.void() },
 
   'dashboard:summary': { input: z.undefined(), output: DashboardSummarySchema },
+
+  // --- cuentas conectadas ---
+  'accounts:list': { input: z.undefined(), output: z.array(AccountSchema) },
+  'accounts:connectInstagramToken': { input: InstagramTokenConnectSchema, output: AccountSchema },
+  'accounts:connectInstagramOAuth': { input: InstagramOAuthConnectSchema, output: AccountSchema },
+  'accounts:refresh': { input: AccountByIdSchema, output: AccountSchema },
+  'accounts:disconnect': { input: AccountByIdSchema, output: z.void() },
+  'accounts:capabilities': {
+    input: z.object({ network: z.enum(NETWORKS) }),
+    output: CapabilitiesSchema
+  },
+
+  // --- publicación ---
+  'publishing:setTarget': { input: SetTargetSchema, output: z.array(PostTargetSchema) },
+  'publishing:publishNow': { input: PublishNowSchema, output: z.array(PostTargetSchema) },
+  'publishing:validate': {
+    input: ById.extend({ id: IdSchema }),
+    output: z.record(z.string(), z.array(ValidationIssueSchema))
+  },
+  'publishing:retry': { input: z.object({ targetId: IdSchema }), output: PostTargetSchema },
+  'publishing:cancel': { input: z.object({ targetId: IdSchema }), output: PostTargetSchema },
+  'publishing:hostStatus': {
+    input: z.undefined(),
+    output: z.object({
+      kind: z.enum(['none', 'cloudinary']),
+      configured: z.boolean(),
+      hasSecret: z.boolean()
+    })
+  },
+  'publishing:setCloudinarySecret': {
+    input: z.object({ apiSecret: z.string().trim().min(1) }),
+    output: z.void()
+  },
+  'publishing:setInstagramAppSecret': {
+    input: z.object({ appSecret: z.string().trim().min(1) }),
+    output: z.void()
+  },
 
   // --- Claude ---
   'ai:status': { input: z.undefined(), output: AiStatusSchema },

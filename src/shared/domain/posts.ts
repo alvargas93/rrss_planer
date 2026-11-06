@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { EntityBase, IdSchema, IsoDateSchema } from './common'
 import { NETWORKS, POST_KINDS } from '../connectors/networks'
 import { MediaAssetSchema } from './media'
+import { PostTargetSchema } from './publishing'
 
 export const NetworkSchema = z.enum(NETWORKS)
 export const PostKindSchema = z.enum(POST_KINDS)
@@ -56,7 +57,9 @@ export const PostSummarySchema = PostSchema.extend({
   networks: z.array(NetworkSchema),
   mediaCount: z.number().int(),
   /** Primer medio, para una miniatura. */
-  thumbnailUrl: z.string().nullable()
+  thumbnailUrl: z.string().nullable(),
+  /** Destinos de publicación (una red → una cuenta). Vacío si nunca se programó. */
+  targets: z.array(PostTargetSchema).default([])
 })
 export type PostSummary = z.infer<typeof PostSummarySchema>
 
@@ -64,7 +67,8 @@ export type PostSummary = z.infer<typeof PostSummarySchema>
 export const PostDetailSchema = z.object({
   post: PostSchema,
   variants: z.array(PostVariantSchema),
-  media: z.array(MediaAssetSchema)
+  media: z.array(MediaAssetSchema),
+  targets: z.array(PostTargetSchema).default([])
 })
 export type PostDetail = z.infer<typeof PostDetailSchema>
 

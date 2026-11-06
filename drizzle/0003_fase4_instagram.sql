@@ -1,0 +1,41 @@
+CREATE TABLE `accounts` (
+	`id` text PRIMARY KEY NOT NULL,
+	`network` text NOT NULL,
+	`external_id` text NOT NULL,
+	`username` text NOT NULL,
+	`display_name` text DEFAULT '' NOT NULL,
+	`avatar_url` text,
+	`account_type` text DEFAULT 'unknown' NOT NULL,
+	`status` text DEFAULT 'connected' NOT NULL,
+	`scopes_json` text DEFAULT '[]' NOT NULL,
+	`token_expires_at` text,
+	`token_refreshed_at` text,
+	`secret_key` text NOT NULL,
+	`last_error` text,
+	`meta_json` text DEFAULT '{}' NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	`deleted_at` text
+);
+--> statement-breakpoint
+CREATE TABLE `post_targets` (
+	`id` text PRIMARY KEY NOT NULL,
+	`post_id` text NOT NULL,
+	`variant_id` text NOT NULL,
+	`account_id` text,
+	`network` text NOT NULL,
+	`mode` text DEFAULT 'api' NOT NULL,
+	`status` text DEFAULT 'pending' NOT NULL,
+	`scheduled_at` text,
+	`external_post_id` text,
+	`external_url` text,
+	`published_at` text,
+	`attempts` integer DEFAULT 0 NOT NULL,
+	`last_error` text,
+	`next_attempt_at` text,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`post_id`) REFERENCES `posts`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`variant_id`) REFERENCES `post_variants`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`account_id`) REFERENCES `accounts`(`id`) ON UPDATE no action ON DELETE set null
+);

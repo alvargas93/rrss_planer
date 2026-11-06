@@ -1,6 +1,6 @@
 import { useDraggable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { Image as ImageIcon } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Image as ImageIcon, Loader2 } from 'lucide-react'
 import type { PostSummary } from '@shared/domain/posts'
 import { NETWORK_META } from '@shared/connectors/networks'
 import { usePillars } from '@renderer/features/pillars/usePillars'
@@ -61,6 +61,19 @@ export function PostChip({
         )}
       >
         <span className="flex items-center gap-1">
+          {post.status === 'published' && (
+            <CheckCircle2 size={12} className="shrink-0 text-success" aria-label="Publicada" />
+          )}
+          {(post.status === 'failed' || post.status === 'partial') && (
+            <AlertCircle size={12} className="shrink-0 text-danger" aria-label="Con fallos" />
+          )}
+          {post.status === 'publishing' && (
+            <Loader2
+              size={12}
+              className="shrink-0 animate-spin text-info"
+              aria-label="Publicando"
+            />
+          )}
           {post.scheduledAt && (
             <span className="font-semibold text-muted">{fmtTime(post.scheduledAt)}</span>
           )}
