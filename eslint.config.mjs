@@ -29,6 +29,10 @@ export default defineConfig(
     }
   },
   {
+    files: ['**/*.{ts,tsx}'],
+    rules: { 'react/prop-types': 'off' }
+  },
+  {
     files: ['**/*.mjs'],
     rules: { '@typescript-eslint/explicit-function-return-type': 'off' }
   },

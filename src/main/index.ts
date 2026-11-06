@@ -2,17 +2,27 @@ import { app, shell, BrowserWindow, dialog, nativeTheme } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { configureUserDataPath, getDbPath, getMigrationsDir } from './paths'
+import { configureUserDataPath, getDbPath, getMediaDir, getMigrationsDir } from './paths'
 import { openDatabase } from './db/client'
 import { SqliteSettingsRepository } from './repositories/settings.repository'
+import { PillarsRepository } from './repositories/pillars.repository'
+import { IdeasRepository } from './repositories/ideas.repository'
+import { TasksRepository } from './repositories/tasks.repository'
+import { PostsRepository } from './repositories/posts.repository'
+import { MediaRepository } from './repositories/media.repository'
 import { SettingsService } from './services/settings.service'
+import { TasksService } from './services/tasks.service'
+import { MEDIA_FILE_FILTERS, MediaService } from './services/media.service'
+import { DashboardService } from './services/dashboard.service'
+import { handleMediaProtocol, registerMediaScheme } from './media/protocol'
 import { registerAllIpc } from './ipc/register-all'
 import { createLogger } from './log'
 
 const log = createLogger('main')
 
-// Debe ir antes de whenReady para que la carpeta de datos sea la correcta.
+// Ambas deben ir antes de whenReady.
 configureUserDataPath()
+registerMediaScheme()
 
 let mainWindow: BrowserWindow | null = null
 let closeDb: (() => void) | null = null
@@ -58,11 +68,33 @@ function createWindow(settings: SettingsService): void {
   }
 }
 
+/** Selector de archivos del sistema, anclado a la ventana principal. */
+async function pickMediaFiles(): Promise<string[]> {
+  const result = await dialog.showOpenDialog(mainWindow ?? new BrowserWindow({ show: false }), {
+    title: 'Añadir imágenes o vídeos',
+    properties: ['openFile', 'multiSelections'],
+    filters: MEDIA_FILE_FILTERS
+  })
+  return result.canceled ? [] : result.filePaths
+}
+
 function bootstrap(): SettingsService {
   const { db, close } = openDatabase({ path: getDbPath(), migrationsFolder: getMigrationsDir() })
   closeDb = close
+
+  const pillars = new PillarsRepository(db)
+  const ideas = new IdeasRepository(db)
+  const tasksRepo = new TasksRepository(db)
+  const posts = new PostsRepository(db)
+  const mediaRepo = new MediaRepository(db)
+
   const settings = new SettingsService(new SqliteSettingsRepository(db))
-  registerAllIpc({ settings })
+  const tasks = new TasksService(tasksRepo)
+  const media = new MediaService(mediaRepo, getMediaDir(), pickMediaFiles)
+  const dashboard = new DashboardService(tasksRepo, ideas, posts, pillars)
+
+  registerAllIpc({ settings, pillars, ideas, tasks, posts, media, dashboard })
+  handleMediaProtocol(getMediaDir())
   return settings
 }
 

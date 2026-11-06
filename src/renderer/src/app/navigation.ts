@@ -20,7 +20,7 @@ export interface NavItem {
   phase: number
 }
 
-export const CURRENT_PHASE = 1
+export const CURRENT_PHASE = 2
 
 export const mainNav: NavItem[] = [
   { to: '/', label: 'Inicio', icon: LayoutDashboard, phase: 1 },

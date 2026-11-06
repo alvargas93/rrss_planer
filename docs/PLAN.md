@@ -1,8 +1,8 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 2 · 2026-11-06 · Fase 1 completada
+> Versión 3 · 2026-11-06 · Fase 2 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
-> Acento aplicado: propuesta A (violeta → coral), pendiente de confirmar.
+> Acento: propuesta A (violeta → coral), confirmado.
 
 Este documento es la especificación de referencia del proyecto (no existía `docs/PRD.md`,
 así que el prompt inicial del propietario es la fuente y este plan lo desarrolla).
@@ -247,6 +247,22 @@ Los medios se copian a `media/` dentro de esa carpeta (no se referencian rutas e
 para que la copia de seguridad sea completa).
 
 ---
+
+### 5.1 Desviaciones aplicadas en Fase 2
+
+- **Medios por publicación, no por variante.** La tabla `post_media` enlaza `post_id` con
+  `media_id`. Simplifica el compositor: se adjuntan los archivos una vez y todas las redes
+  los usan. Si más adelante hace falta un medio distinto por red (p. ej. vertical para
+  reels y horizontal para YouTube), se añadirá una tabla `variant_media` sin romper nada.
+- **Pilares con borrado real** (no lógico): son pocos y las ideas y publicaciones que los
+  usaban quedan "sin pilar" gracias a la clave foránea. El resto de entidades usa
+  `deleted_at`.
+- **Límites por red orientativos.** `src/shared/connectors/networks.ts` contiene
+  caracteres máximos, formatos y proporciones de cada red solo para la vista previa y
+  los contadores. Cada conector los sustituirá por sus capacidades verificadas (Fases 4 y 7).
+- **Tabla `tasks`** añade `completed_at`; **`media_assets`** guarda `file_name` (nombre
+  dentro de la carpeta de medios) en vez de una ruta absoluta, para que la copia de
+  seguridad sea portable.
 
 ## 6. Diseño
 

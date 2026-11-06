@@ -1,4 +1,4 @@
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /**
  * Esquema de la base de datos (Drizzle). Cada fase añade sus tablas aquí y genera
@@ -8,6 +8,17 @@ import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
  * Convenciones (ver docs/PLAN.md §5): ids UUID v7 en texto, fechas ISO 8601 UTC,
  * `deleted_at` para borrado lógico, JSON en columnas de texto.
  */
+
+const timestamps = {
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull()
+}
+
+const softDelete = {
+  deletedAt: text('deleted_at')
+}
+
+// ---------------------------------------------------------------- Fase 1
 
 /** Ajustes de la app, una fila por sección (appearance, general, ai…). */
 export const settings = sqliteTable('settings', {
@@ -23,3 +34,117 @@ export const secrets = sqliteTable('secrets', {
   ciphertext: text('ciphertext').notNull(),
   updatedAt: text('updated_at').notNull()
 })
+
+// ---------------------------------------------------------------- Fase 2
+
+/** Pilares de contenido: los temas sobre los que gira la cuenta. */
+export const contentPillars = sqliteTable('content_pillars', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+  /** Color en hexadecimal (#rrggbb), elegido de una paleta propia. */
+  color: text('color').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Banco de ideas. */
+export const ideas = sqliteTable('ideas', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  notes: text('notes').notNull().default(''),
+  pillarId: text('pillar_id').references(() => contentPillars.id, { onDelete: 'set null' }),
+  /** inbox | maturing | ready | used | discarded */
+  status: text('status').notNull().default('inbox'),
+  source: text('source').notNull().default(''),
+  tagsJson: text('tags_json').notNull().default('[]'),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Publicación "madre": un contenido que luego se adapta a cada red. */
+export const posts = sqliteTable('posts', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  /** Texto base del que parten las variantes. */
+  body: text('body').notNull().default(''),
+  pillarId: text('pillar_id').references(() => contentPillars.id, { onDelete: 'set null' }),
+  ideaId: text('idea_id').references(() => ideas.id, { onDelete: 'set null' }),
+  /** draft | scheduled | publishing | published | partial | failed | cancelled */
+  status: text('status').notNull().default('draft'),
+  scheduledAt: text('scheduled_at'),
+  notes: text('notes').notNull().default(''),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Adaptación de una publicación a una red concreta. */
+export const postVariants = sqliteTable('post_variants', {
+  id: text('id').primaryKey(),
+  postId: text('post_id')
+    .notNull()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  /** instagram | linkedin | x | youtube */
+  network: text('network').notNull(),
+  /** feed | carousel | reel | story | short | video | article | thread */
+  kind: text('kind').notNull(),
+  text: text('text').notNull().default(''),
+  hashtagsJson: text('hashtags_json').notNull().default('[]'),
+  /** Campos propios de la red: título de YouTube, visibilidad, textos alternativos… */
+  extraJson: text('extra_json').notNull().default('{}'),
+  ...timestamps
+})
+
+/** Tareas del tablero y la lista. */
+export const tasks = sqliteTable('tasks', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description').notNull().default(''),
+  /** todo | doing | done */
+  status: text('status').notNull().default('todo'),
+  /** low | medium | high */
+  priority: text('priority').notNull().default('medium'),
+  dueAt: text('due_at'),
+  ideaId: text('idea_id').references(() => ideas.id, { onDelete: 'set null' }),
+  postId: text('post_id').references(() => posts.id, { onDelete: 'set null' }),
+  sortOrder: integer('sort_order').notNull().default(0),
+  completedAt: text('completed_at'),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Archivos de imagen y vídeo copiados a la carpeta de medios de la app. */
+export const mediaAssets = sqliteTable('media_assets', {
+  id: text('id').primaryKey(),
+  /** Nombre de fichero dentro de la carpeta de medios (no una ruta absoluta). */
+  fileName: text('file_name').notNull(),
+  originalName: text('original_name').notNull(),
+  /** image | video */
+  kind: text('kind').notNull(),
+  mime: text('mime').notNull(),
+  width: integer('width'),
+  height: integer('height'),
+  durationMs: integer('duration_ms'),
+  sizeBytes: integer('size_bytes').notNull(),
+  sha256: text('sha256').notNull(),
+  altText: text('alt_text').notNull().default(''),
+  derivedFrom: text('derived_from'),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Medios adjuntos a una publicación, con orden. */
+export const postMedia = sqliteTable(
+  'post_media',
+  {
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    mediaId: text('media_id')
+      .notNull()
+      .references(() => mediaAssets.id, { onDelete: 'cascade' }),
+    sortOrder: integer('sort_order').notNull().default(0)
+  },
+  (table) => [primaryKey({ columns: [table.postId, table.mediaId] })]
+)

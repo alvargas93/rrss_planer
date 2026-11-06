@@ -8,6 +8,13 @@
       "when": 1793972858390,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793975976477,
+      "tag": "0001_fase2_organizacion",
+      "breakpoints": true
     }
   ]
 }

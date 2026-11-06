@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import {
   contracts,
   type ChannelName,
-  type ChannelInput,
+  type ChannelParsedInput,
   type ChannelOutput
 } from '@shared/contracts'
 import { AppError, type IpcResult } from '@shared/domain/errors'
@@ -11,7 +11,7 @@ import { createLogger } from '../log'
 const log = createLogger('ipc')
 
 type Handler<K extends ChannelName> = (
-  input: ChannelInput<K>
+  input: ChannelParsedInput<K>
 ) => ChannelOutput<K> | Promise<ChannelOutput<K>>
 
 /**
@@ -37,7 +37,7 @@ export function handle<K extends ChannelName>(channel: K, handler: Handler<K>): 
         }
       }
       try {
-        const data = await handler(parsed.data as ChannelInput<K>)
+        const data = await handler(parsed.data as ChannelParsedInput<K>)
         return { ok: true, data }
       } catch (error) {
         const appError = AppError.from(error)
