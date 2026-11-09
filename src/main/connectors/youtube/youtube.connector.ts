@@ -56,7 +56,7 @@ export const YOUTUBE_CAPABILITIES: Capabilities = {
   notes: [
     'El título es obligatorio (hasta 100 caracteres); el texto del post es la descripción.',
     'Los Shorts son vídeos verticales cortos: YouTube los clasifica solo. La app añade #Shorts a la descripción.',
-    'YouTube puede programar por sí mismo, pero esta versión sube el vídeo a la hora prevista con la app abierta.',
+    'Programación nativa: la app sube el vídeo hasta 24 h antes (privado, con hora de publicación) y YouTube lo hace público a su hora aunque la app esté cerrada. Necesita abrir la app al menos una vez en esas 24 h.',
     'Si tu proyecto de Google no está auditado, YouTube podría dejar los vídeos subidos en privado (fuentes contradictorias). La app lo comprueba y te avisa.'
   ]
 }
@@ -204,7 +204,8 @@ export class YoutubeConnector implements Connector {
     if (!first) throw new AppError('VALIDATION', 'Falta el vídeo.')
     const progress = input.onProgress ?? ((): void => undefined)
     const { variant } = input
-    const privacy = privacyOf(variant)
+    // Para programar, YouTube exige que el vídeo se suba como privado con `publishAt`.
+    const privacy: Privacy = input.publishAt ? 'private' : privacyOf(variant)
     const description =
       variant.kind === 'short' && !/#shorts/i.test(variant.text)
         ? `${variant.text}\n\n#Shorts`.trim()
@@ -231,7 +232,11 @@ export class YoutubeConnector implements Connector {
               // 22 = "Gente y blogs", categoría genérica (no consta en la página leída que sea opcional).
               categoryId: '22'
             },
-            status: { privacyStatus: privacy, selfDeclaredMadeForKids: false }
+            status: {
+              privacyStatus: privacy,
+              selfDeclaredMadeForKids: false,
+              ...(input.publishAt ? { publishAt: input.publishAt } : {})
+            }
           })
         }
       )

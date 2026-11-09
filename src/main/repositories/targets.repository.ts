@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull, lte, type SQL } from 'drizzle-orm'
+import { and, asc, eq, gt, inArray, isNotNull, lte, type SQL } from 'drizzle-orm'
 import type { Db } from '../db/client'
 import { postTargets } from '../db/schema'
 import { newId, nowIso } from '../db/helpers'
@@ -83,6 +83,24 @@ export class TargetsRepository {
       .all()
       .map(toTarget)
       .filter((t) => t.status !== 'failed' || (t.nextAttemptAt !== null && t.nextAttemptAt <= now))
+  }
+
+  /** Destinos pendientes cuya hora cae entre `from` y `to` (para subir con antelación). */
+  listUpcoming(from: string, to: string): PostTarget[] {
+    return this.db
+      .select()
+      .from(postTargets)
+      .where(
+        and(
+          inArray(postTargets.status, ['pending', 'queued']),
+          isNotNull(postTargets.scheduledAt),
+          gt(postTargets.scheduledAt, from),
+          lte(postTargets.scheduledAt, to)
+        )
+      )
+      .orderBy(asc(postTargets.scheduledAt))
+      .all()
+      .map(toTarget)
   }
 
   create(input: {

@@ -58,6 +58,11 @@ export interface PublishInput {
   }>
   /** Para registrar progreso ("subiendo", "procesando…"). */
   onProgress?: (message: string) => void
+  /**
+   * Hora futura (ISO) a la que la propia red debe publicar. Solo la usan las redes con
+   * `nativeScheduling`; el resto la ignora y publica en el momento.
+   */
+  publishAt?: string | null
 }
 
 export interface PublishResult {

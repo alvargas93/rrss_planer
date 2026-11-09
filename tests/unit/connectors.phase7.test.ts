@@ -235,6 +235,32 @@ describe('YouTube', () => {
     expect(header(session.init, 'Authorization')).toBe('Bearer tok')
   })
 
+  it('programa con publishAt: sube como privado y deja la hora a YouTube', async () => {
+    const calls = stubFetch([
+      ({ url, init }) =>
+        url.includes('/upload/youtube/v3/videos') && init.method === 'POST'
+          ? new Response(null, { status: 200, headers: { location: 'https://upload.example/s2' } })
+          : undefined,
+      ({ url }) =>
+        url === 'https://upload.example/s2'
+          ? json({ id: 'vid2', status: { privacyStatus: 'private' } })
+          : undefined
+    ])
+    const result = await connector.publish({
+      account: account(),
+      accessToken: 'tok',
+      variant: variant(),
+      media: [{ asset: asset(), publicUrl: '', filePath: file }],
+      publishAt: '2026-12-01T10:00:00.000Z'
+    })
+    const body = JSON.parse(String(calls[0]!.init.body))
+    expect(body.status).toMatchObject({
+      privacyStatus: 'private',
+      publishAt: '2026-12-01T10:00:00.000Z'
+    })
+    expect(result.notice).toBeNull() // privado es lo pedido: no es una restricción de YouTube
+  })
+
   it('renueva el acceso con el refresh token', async () => {
     const calls = stubFetch([() => json({ access_token: 'nuevo', expires_in: 3600 })])
     const refreshed = await connector.refreshToken('viejo', 'r1')

@@ -157,6 +157,15 @@ class FakeTargets {
     if (!t) throw new AppError('NOT_FOUND', 'no')
     return t
   }
+  listUpcoming(from: string, to: string): PostTarget[] {
+    return this.rows.filter(
+      (t) =>
+        ['pending', 'queued'].includes(t.status) &&
+        t.scheduledAt &&
+        t.scheduledAt > from &&
+        t.scheduledAt <= to
+    )
+  }
   listDue(now: string): PostTarget[] {
     return this.rows.filter(
       (t) =>
@@ -239,11 +248,14 @@ const account: Account = {
   updatedAt: 'now'
 }
 
-function fakeConnector(publish: (input: PublishInput) => Promise<PublishResult>): Connector {
+function fakeConnector(
+  publish: (input: PublishInput) => Promise<PublishResult>,
+  native = false
+): Connector {
   const ig = new InstagramConnector()
   return {
     network: 'instagram',
-    capabilities: () => ig.capabilities(),
+    capabilities: () => ({ ...ig.capabilities(), nativeScheduling: native }),
     identify: vi.fn(),
     refreshToken: vi.fn(),
     validate: (v, m) => ig.validate(v, m),
@@ -258,6 +270,7 @@ function setup(
     hostConfigured?: boolean
     withAccount?: boolean
     scheduledAt?: string | null
+    native?: boolean
   } = {}
 ) {
   const scheduledAt =
@@ -290,7 +303,8 @@ function setup(
   }
   const connector = fakeConnector(
     options.publish ??
-      (async () => ({ externalPostId: 'ig123', externalUrl: 'https://instagram.com/p/x' }))
+      (async () => ({ externalPostId: 'ig123', externalUrl: 'https://instagram.com/p/x' })),
+    options.native ?? false
   )
   const accounts = {
     list: () => (options.withAccount === false ? [] : [account]),
@@ -315,6 +329,43 @@ function setup(
   })
   return { service, posts, targets, notify, host, removed, accounts }
 }
+
+describe('PublishingService · programación nativa', () => {
+  const at = '2026-11-10T10:00:00.000Z'
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const publishMock = () =>
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    vi.fn(async (_input: PublishInput) => ({ externalPostId: 'yt1', externalUrl: null }))
+
+  it('sube con antelación y deja la hora de publicación a la red', async () => {
+    const publish = publishMock()
+    const { service } = setup({ native: true, publish, scheduledAt: at })
+    service.syncTargets('p1')
+    await service.runDue(new Date('2026-11-10T07:00:00.000Z'))
+    expect(publish).toHaveBeenCalledTimes(1)
+    expect(publish.mock.calls[0]![0].publishAt).toBe(at)
+    expect(service.syncTargets('p1')[0]).toMatchObject({ status: 'published', publishedAt: at })
+    await service.runDue(new Date('2026-11-10T07:01:00.000Z'))
+    expect(publish).toHaveBeenCalledTimes(1) // no se sube dos veces
+  })
+
+  it('no sube todavía si falta más de un día o menos de 15 minutos', async () => {
+    const publish = publishMock()
+    const { service } = setup({ native: true, publish, scheduledAt: at })
+    service.syncTargets('p1')
+    await service.runDue(new Date('2026-11-08T09:00:00.000Z')) // 49 h antes
+    await service.runDue(new Date('2026-11-10T09:50:00.000Z')) // 10 min antes
+    expect(publish).not.toHaveBeenCalled()
+  })
+
+  it('las redes sin programación nativa esperan a su hora', async () => {
+    const publish = publishMock()
+    const { service } = setup({ native: false, publish, scheduledAt: at })
+    service.syncTargets('p1')
+    await service.runDue(new Date('2026-11-10T07:00:00.000Z'))
+    expect(publish).not.toHaveBeenCalled()
+  })
+})
 
 describe('PublishingService', () => {
   it('crea un destino por red y asigna la única cuenta de esa red', () => {

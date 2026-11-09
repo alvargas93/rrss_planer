@@ -378,11 +378,14 @@ Fichas verificadas el 2026-11-09 en `docs/connectors/youtube.md`, `linkedin.md` 
   se dejan desactivadas porque leer se cobra.
 - **Decisión del propietario (2026-11-09): X en modo manual.** No se conecta cuenta de X; el conector queda listo por si cambia. **Coste de X.** Pago por uso sin nivel gratuito; un post con enlace cuesta 13 veces más. El
   compositor lo avisa antes de publicar.
-- **Pendiente.** (1) La programación nativa de YouTube (`publishAt`) está soportada por la
-  ficha pero no conectada: la app sube a la hora prevista como en el resto de redes.
-  (2) Hay datos contradictorios sobre si YouTube deja en privado los vídeos de proyectos sin
-  auditar; la app lo comprueba tras subir y avisa. (3) Hilos largos de X y publicar como
-  página de empresa en LinkedIn.
+- **Programación nativa de YouTube (conectada el 2026-11-09, gratuita).** Si un destino de
+  YouTube sale en las próximas 24 h, la app lo sube como privado con `publishAt` y YouTube lo
+  hace público a su hora, aunque la app esté cerrada. Ocupa la misma cuota que una subida
+  normal. El post figura como publicado desde la subida. Si se reprograma después, hay que
+  cambiarlo en YouTube Studio.
+- **Pendiente.** (1) Hay datos contradictorios sobre si YouTube deja en privado los vídeos de
+  proyectos sin auditar; la app lo comprueba tras subir y avisa. (2) Hilos largos de X y
+  publicar como página de empresa en LinkedIn.
 
 ## 6. Diseño
 

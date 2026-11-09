@@ -15,6 +15,11 @@ import { createLogger } from '../log'
 
 const log = createLogger('publishing')
 
+/** Margen mínimo entre la subida y la hora de publicación que exige la red. */
+const NATIVE_MIN_LEAD_MS = 15 * 60_000
+/** Con cuánta antelación se sube a las redes con programación nativa. */
+const NATIVE_WINDOW_MS = 24 * 60 * 60_000
+
 export interface PublishingDeps {
   posts: PostsRepository
   targets: TargetsRepository
@@ -198,9 +203,29 @@ export class PublishingService {
       }
       await this.process(target.id, { force: false, now })
     }
+    await this.uploadAhead(now)
   }
 
-  private async process(targetId: string, options: { force: boolean; now: Date }): Promise<void> {
+  /**
+   * Redes con programación nativa (YouTube): si el destino sale en las próximas 24 h, se
+   * sube ya y la propia red lo publica a su hora, aunque la app esté cerrada entonces.
+   * Se exige un margen de 15 minutos porque la red rechaza horas demasiado cercanas.
+   */
+  private async uploadAhead(now: Date): Promise<void> {
+    const from = new Date(now.getTime() + NATIVE_MIN_LEAD_MS).toISOString()
+    const to = new Date(now.getTime() + NATIVE_WINDOW_MS).toISOString()
+    for (const target of this.deps.targets.listUpcoming(from, to)) {
+      if (target.mode !== 'api' || !target.accountId) continue
+      if (!this.deps.connectors.has(target.network)) continue
+      if (!this.deps.connectors.get(target.network).capabilities().nativeScheduling) continue
+      await this.process(target.id, { force: false, now, publishAt: target.scheduledAt })
+    }
+  }
+
+  private async process(
+    targetId: string,
+    options: { force: boolean; now: Date; publishAt?: string | null }
+  ): Promise<void> {
     if (this.running.has(targetId)) return
     this.running.add(targetId)
     try {
@@ -232,7 +257,14 @@ export class PublishingService {
         return
       }
 
-      await this.publishViaApi(target, detail, variant.id, options.force, options.now)
+      await this.publishViaApi(
+        target,
+        detail,
+        variant.id,
+        options.force,
+        options.now,
+        options.publishAt ?? null
+      )
     } finally {
       this.running.delete(targetId)
     }
@@ -243,7 +275,8 @@ export class PublishingService {
     detail: PostDetail,
     variantId: string,
     force: boolean,
-    now: Date
+    now: Date,
+    publishAt: string | null
   ): Promise<void> {
     const variant = detail.variants.find((v) => v.id === variantId)!
     const connector = this.deps.connectors.get(target.network)
@@ -292,11 +325,12 @@ export class PublishingService {
         accessToken: await this.deps.accounts.freshToken(account.id),
         variant,
         media,
+        publishAt,
         onProgress: (message) => log.info(`[${account.username}] ${message}`)
       })
       this.deps.targets.update(target.id, {
         status: 'published',
-        publishedAt: new Date().toISOString(),
+        publishedAt: publishAt ?? new Date().toISOString(),
         externalPostId: result.externalPostId,
         externalUrl: result.externalUrl,
         lastError: null
@@ -306,7 +340,9 @@ export class PublishingService {
         this.notifyPost(
           target.postId,
           `Publicado en ${NETWORK_META[target.network].label}`,
-          `«${detail.post.title}» ya está en @${account.username}.`
+          publishAt
+            ? `«${detail.post.title}» está subida y ${NETWORK_META[target.network].label} la publicará el ${new Date(publishAt).toLocaleString('es')}.`
+            : `«${detail.post.title}» ya está en @${account.username}.`
         )
       }
       if (result.notice) this.notifyPost(target.postId, 'Revisa esta publicación', result.notice)

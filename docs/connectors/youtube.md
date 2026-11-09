@@ -82,3 +82,7 @@ Gratis. Hay una cuota diaria por proyecto; la app trata `quotaExceeded` como "cu
 
 Token revocado o caducado (`invalid_grant`, 401): pedir reconectar. `quotaExceeded` (403): cupo
 diario agotado. Formato no válido: mensaje claro. Cortes de red: reanudar la subida.
+
+## 8. Programación nativa (conectada el 2026-11-09)
+
+Si el destino sale en las próximas 24 h (y con al menos 15 minutos de margen), la app sube el vídeo como privado con status.publishAt y YouTube lo publica a su hora. No cuesta más cuota que una subida normal. Si falla la subida anticipada, se reintenta y, en último caso, se publica a la hora prevista como en las demás redes.
