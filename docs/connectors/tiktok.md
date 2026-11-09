@@ -30,3 +30,6 @@ la cuenta propia**. La app no publica en TikTok (ADR 0002).
 
 Empezar en **manual** (capturas). Probar la vía automática con el sandbox. Si no funciona sin
 revisión o sin servidor web, TikTok se queda manual.
+
+**Estado tras la Fase 9:** TikTok funciona con capturas y nombre de usuario. La lectura automática
+no está programada: hace falta una cuenta de TikTok for Developers para probar el sandbox.

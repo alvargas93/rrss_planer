@@ -48,33 +48,45 @@ export class PublishingService {
 
   // ------------------------------------------------------------ destinos
 
-  /** Alinea los destinos con las variantes del post (se llama al guardar o programar). */
+  /**
+   * Alinea los destinos con las variantes del post. Se llama también al LEER un post, así que
+   * solo escribe y avisa a la interfaz si algo cambia de verdad: si avisara siempre, cada
+   * lectura provocaría otra lectura y la pantalla entraría en un bucle sin fin.
+   */
   syncTargets(postId: string): PostTarget[] {
     const detail = this.deps.posts.get(postId)
     const existing = this.deps.targets.listByPost(postId)
     const byNetwork = new Map(existing.map((t) => [t.network, t]))
     const accounts = this.deps.accounts.list()
+    let changed = false
 
     for (const variant of detail.variants) {
       const current = byNetwork.get(variant.network)
       if (current) {
-        if (current.status === 'published' || current.status === 'publishing') continue
-        this.deps.targets.update(current.id, {
-          variantId: variant.id,
-          scheduledAt: detail.post.scheduledAt,
-          // Un destino cancelado o fallido vuelve a pendiente si se reprograma.
-          ...(current.status === 'cancelled' || current.status === 'manual_notified'
-            ? { status: 'pending', attempts: 0, lastError: null, nextAttemptAt: null }
-            : {})
-        })
         byNetwork.delete(variant.network)
+        if (current.status === 'published' || current.status === 'publishing') continue
+        const rescheduled = current.scheduledAt !== detail.post.scheduledAt
+        // Un destino cancelado o ya avisado vuelve a pendiente solo si se reprograma.
+        const reset =
+          rescheduled && (current.status === 'cancelled' || current.status === 'manual_notified')
+        if (current.variantId !== variant.id || rescheduled) {
+          this.deps.targets.update(current.id, {
+            variantId: variant.id,
+            scheduledAt: detail.post.scheduledAt,
+            ...(reset
+              ? { status: 'pending', attempts: 0, lastError: null, nextAttemptAt: null }
+              : {})
+          })
+          changed = true
+        }
         continue
       }
+      changed = true
       // Cuenta por defecto: la única de esa red, si existe.
       const candidates = accounts.filter((a) => a.network === variant.network)
       const account = candidates.length === 1 ? candidates[0] : undefined
       const mode: TargetMode =
-        account && this.deps.connectors.has(variant.network) ? 'api' : 'manual'
+        this.apiMode() && account && this.deps.connectors.has(variant.network) ? 'api' : 'manual'
       this.deps.targets.create({
         postId,
         variantId: variant.id,
@@ -87,9 +99,13 @@ export class PublishingService {
     }
     // Variantes eliminadas → destinos sin publicar fuera.
     for (const orphan of byNetwork.values()) {
-      if (orphan.status !== 'published') this.deps.targets.delete(orphan.id)
+      if (orphan.status !== 'published') {
+        this.deps.targets.delete(orphan.id)
+        changed = true
+      }
     }
-    this.recomputePostStatus(postId)
+    const statusChanged = this.recomputePostStatus(postId, false)
+    if (changed && !statusChanged) this.deps.onPostChanged(postId)
     return this.deps.targets.listByPost(postId)
   }
 
@@ -111,7 +127,9 @@ export class PublishingService {
     if (target.status === 'published')
       throw new AppError('CONFLICT', 'Ese destino ya está publicado.')
     const mode: TargetMode =
-      input.accountId && this.deps.connectors.has(input.network) ? input.mode : 'manual'
+      this.apiMode() && input.accountId && this.deps.connectors.has(input.network)
+        ? input.mode
+        : 'manual'
     this.deps.targets.update(target.id, {
       accountId: input.accountId,
       mode,
@@ -142,6 +160,53 @@ export class PublishingService {
         .validate(variant, detail.media)
     }
     return result
+  }
+
+  /** Desde la Fase 9 lo normal es publicar a mano; la API solo se usa si el usuario la activa. */
+  private apiMode(): boolean {
+    return this.deps.settings.get().publishing.mode === 'api'
+  }
+
+  /**
+   * Publicación manual: el usuario marca que ya la publicó (con el enlace, si quiere) o lo
+   * deshace. Nunca publica nada en la red.
+   */
+  markManual(input: {
+    postId: string
+    network: Network
+    published: boolean
+    url: string | null
+  }): PostTarget[] {
+    this.syncTargets(input.postId)
+    const target = this.deps.targets
+      .listByPost(input.postId)
+      .find((t) => t.network === input.network)
+    if (!target)
+      throw new AppError(
+        'NOT_FOUND',
+        `El post no tiene versión para ${NETWORK_META[input.network].label}.`
+      )
+    if (input.published) {
+      this.deps.targets.update(target.id, {
+        mode: 'manual',
+        status: 'published',
+        publishedAt: new Date().toISOString(),
+        externalUrl: input.url,
+        lastError: null,
+        nextAttemptAt: null
+      })
+    } else if (target.status === 'published') {
+      // Si su hora ya pasó, no se vuelve a avisar: queda como "avisada".
+      const past = !!target.scheduledAt && new Date(target.scheduledAt).getTime() <= Date.now()
+      this.deps.targets.update(target.id, {
+        status: past ? 'manual_notified' : 'pending',
+        publishedAt: null,
+        externalUrl: null,
+        externalPostId: null
+      })
+    }
+    this.recomputePostStatus(input.postId)
+    return this.deps.targets.listByPost(input.postId)
   }
 
   // ------------------------------------------------------------ ejecución
@@ -212,6 +277,7 @@ export class PublishingService {
    * Se exige un margen de 15 minutos porque la red rechaza horas demasiado cercanas.
    */
   private async uploadAhead(now: Date): Promise<void> {
+    if (!this.apiMode()) return
     const from = new Date(now.getTime() + NATIVE_MIN_LEAD_MS).toISOString()
     const to = new Date(now.getTime() + NATIVE_WINDOW_MS).toISOString()
     for (const target of this.deps.targets.listUpcoming(from, to)) {
@@ -242,6 +308,7 @@ export class PublishingService {
         this.deps.connectors.has(target.network) &&
         this.deps.connectors.get(target.network).capabilities().requiresPublicMediaUrl
       const manual =
+        !this.apiMode() ||
         target.mode === 'manual' ||
         !target.accountId ||
         !this.deps.connectors.has(target.network) ||
@@ -400,22 +467,26 @@ export class PublishingService {
     this.deps.onPostChanged(postId)
   }
 
-  /** Estado del post a partir de sus destinos. */
-  recomputePostStatus(postId: string): void {
+  /**
+   * Estado del post a partir de sus destinos. Avisa a la interfaz si el estado cambia o si
+   * `emit` lo pide (acciones explícitas); devuelve si el estado cambió.
+   */
+  recomputePostStatus(postId: string, emit = true): boolean {
     const detail = this.deps.posts.get(postId)
     const targets = this.deps.targets.listByPost(postId)
     let status: PostStatus
     const statuses = targets.map((t) => t.status)
     if (targets.length === 0) status = detail.post.scheduledAt ? 'scheduled' : 'draft'
-    else if (statuses.every((s) => s === 'published' || s === 'manual_notified'))
-      status = statuses.includes('published') ? 'published' : 'scheduled'
+    else if (statuses.every((s) => s === 'published')) status = 'published'
     else if (statuses.includes('publishing')) status = 'publishing'
     else if (statuses.includes('published')) status = 'partial'
     else if (statuses.some((s) => s === 'failed')) status = 'failed'
     else if (statuses.every((s) => s === 'cancelled')) status = 'cancelled'
     else status = detail.post.scheduledAt ? 'scheduled' : 'draft'
-    if (status !== detail.post.status) this.deps.posts.setStatus(postId, status)
-    this.deps.onPostChanged(postId)
+    const changed = status !== detail.post.status
+    if (changed) this.deps.posts.setStatus(postId, status)
+    if (changed || emit) this.deps.onPostChanged(postId)
+    return changed
   }
 
   /** Resúmenes de post con sus destinos (para calendario y listas). */

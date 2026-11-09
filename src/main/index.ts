@@ -1,4 +1,5 @@
 import { app, shell, BrowserWindow, clipboard, dialog, nativeTheme, safeStorage } from 'electron'
+import { AppError } from '@shared/domain/errors'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -56,6 +57,10 @@ import { UpdateService, type UpdaterLike } from './services/update.service'
 import { applyPendingRestore, createBackup, listSnapshots, stageRestore } from './backup/backup'
 import { dumpWithoutSecrets, mergeSecrets } from './backup/sqlite'
 import { applyLoginItem, startedHidden } from './system/login-item'
+import { AnalysisRepository } from './repositories/analysis.repository'
+import { ANALYSIS_SECRET_KEYS, AnalysisService } from './services/analysis.service'
+import { instagramProfileData } from './services/analysis.sources'
+import { loadScreenshot, SCREENSHOT_FILTERS } from './system/screenshots'
 
 const log = createLogger('main')
 
@@ -154,6 +159,16 @@ async function pickMediaFiles(): Promise<string[]> {
     title: 'Añadir imágenes o vídeos',
     properties: ['openFile', 'multiSelections'],
     filters: MEDIA_FILE_FILTERS
+  })
+  return result.canceled ? [] : result.filePaths
+}
+
+/** Selector de capturas de pantalla para el análisis de cuentas. */
+async function pickScreenshots(): Promise<string[]> {
+  const result = await dialog.showOpenDialog(mainWindow ?? new BrowserWindow({ show: false }), {
+    title: 'Elige las capturas de pantalla',
+    properties: ['openFile', 'multiSelections'],
+    filters: SCREENSHOT_FILTERS
   })
   return result.canceled ? [] : result.filePaths
 }
@@ -260,6 +275,27 @@ function bootstrap(): SettingsService {
   // Vídeos importados antes de la Fase 6: completar duración y miniatura en segundo plano.
   setTimeout(() => void media.processPending(), 8000)
   const analytics = new AnalyticsService(new AnalyticsRepository(db), accounts, connectors, targets)
+  const analysis = new AnalysisService({
+    store: new AnalysisRepository(db),
+    ai,
+    loadImage: loadScreenshot,
+    createPost: (input) => {
+      const detail = posts.create(input)
+      // Crea los destinos manuales: la app avisará a la hora de publicar.
+      publishing.syncTargets(detail.post.id)
+      return detail
+    },
+    pillars: () => pillars.list().map((p) => ({ id: p.id, name: p.name })),
+    youtubeApiKey: () => secrets.get(ANALYSIS_SECRET_KEYS.youtubeApiKey),
+    instagramData: async (accountId) => {
+      const sync = await analytics.sync(accountId)
+      if (!sync.ok) throw new AppError('EXTERNAL_API', sync.message)
+      return instagramProfileData(
+        analytics.overview({ accountId, days: 30 }),
+        accounts.get(accountId)
+      )
+    }
+  })
 
   const schemaVersion = readSchemaVersion()
   const backupDeps = {
@@ -313,7 +349,9 @@ function bootstrap(): SettingsService {
         app.exit(0)
       }, 800)
     },
-    updates
+    updates,
+    analysis,
+    pickScreenshots
   })
   handleMediaProtocol(getMediaDir())
 

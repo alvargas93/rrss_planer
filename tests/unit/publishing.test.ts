@@ -314,6 +314,8 @@ function setup(
     markError: vi.fn()
   } as unknown as AccountsService
   const settings = new SettingsService(new InMemorySettingsRepository())
+  // Estas pruebas cubren la publicación por API, que desde la Fase 9 hay que activar.
+  settings.update({ publishing: { mode: 'api' } })
   const service = new PublishingService({
     posts: posts as unknown as PostsRepository,
     targets: targets as unknown as TargetsRepository,
@@ -327,8 +329,98 @@ function setup(
     copyToClipboard: vi.fn(),
     prepareImage: async (asset) => asset
   })
-  return { service, posts, targets, notify, host, removed, accounts }
+  return { service, posts, targets, notify, host, removed, accounts, settings, onPostChanged }
 }
+
+describe('PublishingService · publicación manual (Fase 9)', () => {
+  it('en modo manual nunca usa la API: avisa a la hora y deja el texto copiado', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const publish = vi.fn(async (_input: PublishInput) => ({
+      externalPostId: 'x',
+      externalUrl: null
+    }))
+    const { service, settings, notify, posts } = setup({ publish })
+    settings.update({ publishing: { mode: 'manual' } })
+    expect(service.syncTargets('p1')[0]?.mode).toBe('manual')
+    const targets = await service.publishNow('p1')
+    expect(publish).not.toHaveBeenCalled()
+    expect(targets[0]?.status).toBe('manual_notified')
+    expect(notify).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringContaining('Hora de publicar') })
+    )
+    expect(posts.status).toBe('scheduled')
+  })
+
+  it('un destino que era por API tampoco publica si se vuelve al modo manual', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const publish = vi.fn(async (_input: PublishInput) => ({
+      externalPostId: 'x',
+      externalUrl: null
+    }))
+    const { service, settings } = setup({ publish })
+    expect(service.syncTargets('p1')[0]?.mode).toBe('api')
+    settings.update({ publishing: { mode: 'manual' } })
+    await service.publishNow('p1')
+    await service.runDue(new Date('2026-11-10T10:01:00.000Z'))
+    expect(publish).not.toHaveBeenCalled()
+  })
+
+  it('marcar y desmarcar una red como publicada a mano', () => {
+    const { service, settings, posts } = setup({ scheduledAt: '2030-01-01T10:00:00.000Z' })
+    settings.update({ publishing: { mode: 'manual' } })
+    const marked = service.markManual({
+      postId: 'p1',
+      network: 'instagram',
+      published: true,
+      url: 'https://www.instagram.com/p/1'
+    })
+    expect(marked[0]).toMatchObject({
+      status: 'published',
+      mode: 'manual',
+      externalUrl: 'https://www.instagram.com/p/1'
+    })
+    expect(marked[0]?.publishedAt).toBeTruthy()
+    expect(posts.status).toBe('published')
+
+    const undone = service.markManual({
+      postId: 'p1',
+      network: 'instagram',
+      published: false,
+      url: null
+    })
+    expect(undone[0]).toMatchObject({ status: 'pending', publishedAt: null, externalUrl: null })
+    expect(posts.status).toBe('scheduled')
+    expect(() =>
+      service.markManual({ postId: 'p1', network: 'x', published: true, url: null })
+    ).toThrow(AppError)
+  })
+})
+
+describe('PublishingService · leer un post no provoca avisos en bucle', () => {
+  it('releer un post sin cambios no avisa a la interfaz ni reactiva destinos ya avisados', async () => {
+    const { service, settings, onPostChanged } = setup()
+    settings.update({ publishing: { mode: 'manual' } })
+    service.syncTargets('p1')
+    await service.publishNow('p1')
+    onPostChanged.mockClear()
+    const again = service.syncTargets('p1')
+    expect(again[0]?.status).toBe('manual_notified')
+    expect(onPostChanged).not.toHaveBeenCalled()
+  })
+
+  it('reprogramar sí devuelve a pendiente un destino ya avisado y avisa a la interfaz', async () => {
+    const { service, settings, onPostChanged } = setup()
+    settings.update({ publishing: { mode: 'manual' } })
+    service.syncTargets('p1')
+    await service.publishNow('p1')
+    onPostChanged.mockClear()
+    const detail = (service as unknown as { deps: { posts: FakePosts } }).deps.posts.detail
+    detail.post.scheduledAt = '2026-11-12T10:00:00.000Z'
+    const moved = service.syncTargets('p1')
+    expect(moved[0]).toMatchObject({ status: 'pending', scheduledAt: '2026-11-12T10:00:00.000Z' })
+    expect(onPostChanged).toHaveBeenCalled()
+  })
+})
 
 describe('PublishingService · programación nativa', () => {
   const at = '2026-11-10T10:00:00.000Z'

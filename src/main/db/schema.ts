@@ -339,3 +339,55 @@ export const postMedia = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.postId, table.mediaId] })]
 )
+
+// ---------------------------------------------------------------- Fase 9
+
+/** Cuentas que se analizan (propias o de referencia). No hace falta conectarlas. */
+export const trackedProfiles = sqliteTable('tracked_profiles', {
+  id: text('id').primaryKey(),
+  /** instagram | linkedin | x | youtube | tiktok */
+  network: text('network').notNull(),
+  username: text('username').notNull(),
+  displayName: text('display_name').notNull().default(''),
+  isOwn: integer('is_own', { mode: 'boolean' }).notNull().default(true),
+  /** Cuenta conectada de la que leer datos automáticos (Instagram propia). */
+  accountId: text('account_id').references(() => accounts.id, { onDelete: 'set null' }),
+  notes: text('notes').notNull().default(''),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Datos de una cuenta en un momento (de capturas, a mano o de una API gratuita). */
+export const profileSnapshots = sqliteTable('profile_snapshots', {
+  id: text('id').primaryKey(),
+  profileId: text('profile_id')
+    .notNull()
+    .references(() => trackedProfiles.id, { onDelete: 'cascade' }),
+  /** screenshots | manual | instagram | youtube */
+  source: text('source').notNull(),
+  capturedAt: text('captured_at').notNull(),
+  dataJson: text('data_json').notNull(),
+  ...timestamps,
+  ...softDelete
+})
+
+/** Análisis y planes generados por Claude para una cuenta. */
+export const profileAnalyses = sqliteTable('profile_analyses', {
+  id: text('id').primaryKey(),
+  profileId: text('profile_id')
+    .notNull()
+    .references(() => trackedProfiles.id, { onDelete: 'cascade' }),
+  /** audit | plan */
+  kind: text('kind').notNull(),
+  snapshotId: text('snapshot_id').references(() => profileSnapshots.id, { onDelete: 'set null' }),
+  instruction: text('instruction').notNull().default(''),
+  resultJson: text('result_json').notNull(),
+  /** Parámetros del plan (fechas, redes, formatos). '{}' en los análisis. */
+  requestJson: text('request_json').notNull().default('{}'),
+  /** Índice de pieza → id del borrador creado. */
+  appliedJson: text('applied_json').notNull().default('{}'),
+  model: text('model').notNull(),
+  costUsd: real('cost_usd').notNull().default(0),
+  ...timestamps,
+  ...softDelete
+})

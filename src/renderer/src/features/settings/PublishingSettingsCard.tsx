@@ -61,6 +61,16 @@ export function PublishingSettingsCard({ settings }: { settings: Settings }): Re
       </CardHeader>
       <CardContent>
         <Row
+          label="Publicar por API"
+          hint="Desactivado (recomendado): preparas cada pieza y la publicas tú; la app te avisa a la hora. Activado: la app publica sola en las cuentas conectadas."
+        >
+          <Switch
+            checked={p.mode === 'api'}
+            onCheckedChange={(on) => update.mutate({ publishing: { mode: on ? 'api' : 'manual' } })}
+            aria-label="Publicar por API"
+          />
+        </Row>
+        <Row
           label="Alojamiento temporal de medios"
           hint="Cloudinary tiene plan gratuito; solo hacen falta tres datos de tu cuenta."
         >

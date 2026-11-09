@@ -1,4 +1,4 @@
-import { app, dialog, shell } from 'electron'
+import { app, clipboard, dialog, shell } from 'electron'
 import type { BackupService } from '../services/backup.service'
 import type { UpdateService } from '../services/update.service'
 import type { SnapshotInfo } from '../backup/backup'
@@ -21,9 +21,11 @@ import type { AnalyticsService } from '../services/analytics.service'
 import type { VideoService } from '../services/video.service'
 import type { SecretStore } from '../secrets/secrets.service'
 import type { MediaHost } from '../media-host/media-host'
-import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
+import { APP_DISPLAY_NAME, getDataDir, getDbPath, getMediaDir } from '../paths'
 import { OAUTH_NETWORKS } from '@shared/domain/accounts'
 import { CLIENT_ID_SETTING, clientSecretKey } from '../connectors/clients'
+import { ANALYSIS_SECRET_KEYS, type AnalysisService } from '../services/analysis.service'
+import { exportPostMedia } from '../services/export'
 
 export const PUBLISHING_SECRET_KEYS = {
   cloudinaryApiSecret: 'cloudinary.apiSecret',
@@ -49,6 +51,9 @@ export interface IpcDependencies {
   listBackups: (dir: string) => Promise<SnapshotInfo[]>
   restoreBackup: (dir: string, snapshot: string) => Promise<void>
   updates: UpdateService
+  analysis: AnalysisService
+  /** Selector de capturas (imágenes) del sistema. */
+  pickScreenshots: () => Promise<string[]>
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -75,6 +80,10 @@ export function registerAllIpc(deps: IpcDependencies): void {
       throw new AppError('VALIDATION', 'Solo se abren enlaces https')
     }
     await shell.openExternal(url)
+  })
+
+  handle('app:copyText', ({ text }) => {
+    clipboard.writeText(text)
   })
 
   // --- settings ---
@@ -140,6 +149,21 @@ export function registerAllIpc(deps: IpcDependencies): void {
     return deps.publishing.withTargets([deps.posts.summary(id)])[0]!
   })
   handle('posts:delete', ({ id }) => deps.posts.delete(id))
+  handle('posts:exportMedia', async ({ id }) => {
+    const detail = deps.posts.get(id)
+    if (detail.media.length === 0) {
+      throw new AppError('VALIDATION', 'Esta publicación no tiene archivos que guardar.')
+    }
+    const result = await dialog.showOpenDialog({
+      title: 'Elige dónde guardar los archivos',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    const dir = result.canceled ? undefined : result.filePaths[0]
+    if (!dir) return null
+    const files = await exportPostMedia(detail, getMediaDir(), dir)
+    if (files[0]) shell.showItemInFolder(files[0])
+    return { dir, files }
+  })
 
   // --- cuentas ---
   handle('accounts:list', () => deps.accounts.list())
@@ -187,6 +211,7 @@ export function registerAllIpc(deps: IpcDependencies): void {
   handle('publishing:validate', ({ id }) => deps.publishing.validate(id))
   handle('publishing:retry', ({ targetId }) => deps.publishing.retry(targetId))
   handle('publishing:cancel', ({ targetId }) => deps.publishing.cancel(targetId))
+  handle('publishing:markManual', (input) => deps.publishing.markManual(input))
   handle('publishing:hostStatus', () => {
     const host = deps.mediaHost()
     return {
@@ -242,4 +267,41 @@ export function registerAllIpc(deps: IpcDependencies): void {
   handle('ai:messages:list', ({ conversationId }) => deps.ai.listMessages(conversationId))
   handle('ai:chat', (request) => deps.ai.chat(request))
   handle('ai:runAction', (request) => deps.ai.runAction(request))
+
+  // --- análisis de cuentas (Fase 9) ---
+  const sources = (): { youtubeApiKey: boolean } => ({
+    youtubeApiKey: deps.secrets.has(ANALYSIS_SECRET_KEYS.youtubeApiKey)
+  })
+  handle('analysis:profiles:list', () => deps.analysis.listProfiles())
+  handle('analysis:profiles:create', (input) => deps.analysis.createProfile(input))
+  handle('analysis:profiles:update', ({ id, patch }) => deps.analysis.updateProfile(id, patch))
+  handle('analysis:profiles:delete', ({ id }) => deps.analysis.deleteProfile(id))
+  handle('analysis:snapshots:list', ({ profileId }) => deps.analysis.listSnapshots(profileId))
+  handle('analysis:snapshots:save', ({ profileId, source, data }) =>
+    deps.analysis.saveSnapshot(profileId, source, data)
+  )
+  handle('analysis:snapshots:delete', ({ id }) => deps.analysis.deleteSnapshot(id))
+  handle('analysis:pickScreenshots', () => deps.pickScreenshots())
+  handle('analysis:readScreenshots', ({ profileId, paths }) =>
+    deps.analysis.readScreenshots(profileId, paths)
+  )
+  handle('analysis:refreshAuto', ({ profileId }) => deps.analysis.refreshAuto(profileId))
+  handle('analysis:sources', () => sources())
+  handle('analysis:setYoutubeApiKey', ({ apiKey }) => {
+    deps.secrets.set(ANALYSIS_SECRET_KEYS.youtubeApiKey, apiKey)
+    return sources()
+  })
+  handle('analysis:clearYoutubeApiKey', () => {
+    deps.secrets.delete(ANALYSIS_SECRET_KEYS.youtubeApiKey)
+    return sources()
+  })
+  handle('analysis:list', ({ profileId }) => deps.analysis.listAnalyses(profileId))
+  handle('analysis:audit', ({ profileId, instruction }) =>
+    deps.analysis.audit(profileId, instruction)
+  )
+  handle('analysis:plan', (request) => deps.analysis.plan(request))
+  handle('analysis:applyPlan', ({ analysisId, itemIndexes }) =>
+    deps.analysis.applyPlan(analysisId, itemIndexes)
+  )
+  handle('analysis:delete', ({ id }) => deps.analysis.deleteAnalysis(id))
 }

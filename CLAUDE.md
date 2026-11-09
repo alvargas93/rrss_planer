@@ -122,3 +122,10 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - La restauración se aplica al arrancar, antes de abrir la base (`applyPendingRestore`). No restaurar con la base abierta.
 - `npm run build:win` genera el instalador; `node tests/e2e/packaged.mjs` prueba el paquete tras `npx electron-builder --dir`.
 - Guia de uso para el propietario: `docs/DISTRIBUCION.md`.
+
+## Fase 9 (análisis y publicación manual)
+
+- Decisión en `docs/decisions/0002-analisis-y-publicacion-manual.md`: la app analiza, planifica y prepara; el usuario publica a mano.
+- `publishing.mode` es `manual` por defecto: en ese modo `PublishingService` nunca llama a las APIs. No cambiarlo sin que el usuario lo pida.
+- Análisis en `main/services/analysis.service.ts`; los tests usan un `AnalysisStore` en memoria. Datos automáticos solo si son gratis y oficiales: Instagram propia (analítica de la Fase 5) y YouTube público (`connectors/youtube/youtube.public.ts`, clave en `secrets` como `youtube.apiKey`).
+- Lo que Claude lee de las capturas nunca se guarda sin que el usuario lo revise. Las llamadas estructuradas sin conversación van por `AiService.generate`.

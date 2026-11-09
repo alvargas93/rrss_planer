@@ -35,6 +35,8 @@ import { cn } from '@renderer/lib/utils'
 import { NetworkPreview } from './NetworkPreview'
 import type { PostTarget } from '@shared/domain/publishing'
 import { PublishPanel } from '@renderer/features/publishing/PublishPanel'
+import { ManualKit } from '@renderer/features/publishing/ManualKit'
+import { useSettings } from '@renderer/features/settings/useSettings'
 import { usePillars } from '@renderer/features/pillars/usePillars'
 import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { useComposerBridge, type ComposerInsert } from '@renderer/features/ai/stores'
@@ -206,6 +208,8 @@ function ComposerForm({
   )
   const [pickerOpen, setPickerOpen] = React.useState(false)
   const { data: pillars } = usePillars()
+  const settings = useSettings()
+  const apiMode = settings.data?.publishing.mode === 'api'
 
   // El asistente ve la publicación que se está editando.
   useScreenContext({
@@ -604,13 +608,28 @@ function ComposerForm({
           )}
           {postId && (
             <div className="mt-4">
-              <PublishPanel
-                postId={postId}
-                targets={targets}
-                networks={NETWORKS.filter((n) => form.variants[n])}
-                dirty={dirty}
-                scheduledAt={form.scheduledAt}
-              />
+              {apiMode ? (
+                <PublishPanel
+                  postId={postId}
+                  targets={targets}
+                  networks={NETWORKS.filter((n) => form.variants[n])}
+                  dirty={dirty}
+                  scheduledAt={form.scheduledAt}
+                />
+              ) : (
+                <ManualKit
+                  postId={postId}
+                  targets={targets}
+                  variants={NETWORKS.filter((n) => form.variants[n]).map((n) => ({
+                    network: n,
+                    kind: form.variants[n]!.kind,
+                    text: form.variants[n]!.text
+                  }))}
+                  mediaCount={form.media.length}
+                  dirty={dirty}
+                  scheduledAt={form.scheduledAt}
+                />
+              )}
             </div>
           )}
         </aside>

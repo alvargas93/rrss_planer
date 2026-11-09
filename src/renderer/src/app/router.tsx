@@ -10,6 +10,7 @@ import { AssistantPage } from '@renderer/features/ai/AssistantPage'
 import { AccountsPage } from '@renderer/features/accounts/AccountsPage'
 import { AnalyticsPage } from '@renderer/features/analytics/AnalyticsPage'
 import { VideoPage } from '@renderer/features/video/VideoPage'
+import { AnalysisPage } from '@renderer/features/analysis/AnalysisPage'
 import { PlaceholderPage } from '@renderer/features/placeholder/PlaceholderPage'
 import { CURRENT_PHASE, mainNav } from './navigation'
 
@@ -24,6 +25,7 @@ export const router = createMemoryRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'analysis', element: <AnalysisPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'ideas', element: <IdeasPage /> },
       { path: 'calendar', element: <CalendarPage /> },

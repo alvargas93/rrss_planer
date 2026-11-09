@@ -43,6 +43,13 @@
       "when": 1793983289985,
       "tag": "0005_fase6_video",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794254174225,
+      "tag": "0006_fase9_analisis",
+      "breakpoints": true
     }
   ]
 }

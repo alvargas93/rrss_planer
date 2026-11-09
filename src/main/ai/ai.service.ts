@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
+import type { z } from 'zod'
 import {
   ActionResultSchemas,
   DEFAULT_MODEL,
@@ -7,6 +8,7 @@ import {
   budgetState,
   estimateCostUsd,
   monthKey,
+  ScreenContextSchema,
   type ActionKind,
   type ActionRequest,
   type AiMessage,
@@ -36,6 +38,28 @@ const ACTION_MAX_TOKENS = 8000
 const HISTORY_LIMIT = 24
 
 export type ClientFactory = (apiKey: string) => Anthropic
+
+/** Imagen para una llamada con visión (capturas de pantalla). */
+export interface GenerateImage {
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+  base64: string
+}
+
+export interface GenerateInput<S extends z.ZodType> {
+  /** Etiqueta para el registro de uso (p. ej. profile_read, profile_audit). */
+  kind: string
+  schema: S
+  prompt: string
+  images?: GenerateImage[]
+  context?: ScreenContext
+  maxTokens?: number
+}
+
+export interface GenerateResult<T> {
+  result: T
+  model: string
+  costUsd: number
+}
 
 export interface AiServiceOptions {
   repo: AiRepository
@@ -300,6 +324,68 @@ export class AiService {
     } catch (error) {
       const appError = translateError(error)
       log.error(`Fallo en acción ${request.kind}: ${appError.message}`)
+      throw appError
+    }
+  }
+
+  // ----------------------------------------------------------- salida estructurada genérica
+
+  /**
+   * Llamada con salida estructurada sin conversación (análisis de cuentas, lectura de
+   * capturas, planes). Acepta imágenes. Registra el uso y el coste como cualquier acción.
+   */
+  async generate<S extends z.ZodType>(
+    input: GenerateInput<S>
+  ): Promise<GenerateResult<z.infer<S>>> {
+    const client = this.client()
+    this.assertBudget()
+    const ai = this.settings.get().ai
+    const system = buildSystemPrompt(
+      input.context ?? ScreenContextSchema.parse({ screen: 'analysis' })
+    )
+    const content: Anthropic.Beta.BetaContentBlockParam[] = [
+      ...(input.images ?? []).map((image): Anthropic.Beta.BetaImageBlockParam => ({
+        type: 'image',
+        source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
+      })),
+      { type: 'text', text: input.prompt }
+    ]
+
+    try {
+      const response = await client.beta.messages.parse({
+        model: ai.model,
+        max_tokens: input.maxTokens ?? ACTION_MAX_TOKENS,
+        system: [
+          { type: 'text', text: system.stable, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: system.dynamic }
+        ],
+        messages: [{ role: 'user', content }],
+        output_config: { effort: ai.effort, format: betaZodOutputFormat(input.schema) },
+        ...(ai.refusalFallback ? { betas: [FALLBACK_BETA], fallbacks: 'default' as const } : {})
+      })
+      const usage = usageFrom(response)
+      const costUsd = estimateCostUsd(usage, this.priceFor(response.model))
+      this.repo.addUsage({ ...usage, model: response.model, kind: input.kind, costUsd })
+
+      if (response.stop_reason === 'refusal') {
+        throw new AppError('REFUSED', this.refusalMessage(response.stop_details?.category))
+      }
+      if (response.stop_reason === 'max_tokens') {
+        throw new AppError(
+          'EXTERNAL_API',
+          'La respuesta de Claude se cortó por ser demasiado larga. Prueba con menos semanas o menos piezas.'
+        )
+      }
+      if (response.parsed_output === null || response.parsed_output === undefined) {
+        throw new AppError(
+          'EXTERNAL_API',
+          'La respuesta no tenía el formato esperado. Vuelve a intentarlo.'
+        )
+      }
+      return { result: response.parsed_output as z.infer<S>, model: response.model, costUsd }
+    } catch (error) {
+      const appError = translateError(error)
+      log.error(`Fallo en ${input.kind}: ${appError.message}`)
       throw appError
     }
   }

@@ -1,7 +1,7 @@
 # ADR 0002 · De publicar por API a analizar, planificar y publicar a mano
 
 - Fecha: 2026-11-09
-- Estado: aceptado por el propietario (pendiente de confirmar el inicio de la Fase 9)
+- Estado: aceptado por el propietario y aplicado en la Fase 9 (2026-11-09)
 
 ## Contexto
 

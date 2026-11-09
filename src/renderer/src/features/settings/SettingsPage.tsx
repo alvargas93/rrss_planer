@@ -27,6 +27,7 @@ import { AiSettingsCard } from './AiSettingsCard'
 import { PublishingSettingsCard } from './PublishingSettingsCard'
 import { BackupCard } from './BackupCard'
 import { UpdatesCard } from './UpdatesCard'
+import { AutoDataCard } from './AutoDataCard'
 
 function Row({
   label,
@@ -189,6 +190,8 @@ export function SettingsPage(): React.JSX.Element {
         <AiSettingsCard settings={settings} />
 
         <PublishingSettingsCard settings={settings} />
+
+        <AutoDataCard />
 
         <BackupCard settings={settings} />
 

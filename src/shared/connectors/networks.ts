@@ -6,7 +6,7 @@
  * redes conectadas). Cada conector los sustituirá por sus `Capabilities`
  * verificadas contra la documentación oficial en su fase (4 y 7).
  */
-export const NETWORKS = ['instagram', 'linkedin', 'x', 'youtube'] as const
+export const NETWORKS = ['instagram', 'linkedin', 'x', 'youtube', 'tiktok'] as const
 export type Network = (typeof NETWORKS)[number]
 
 export const POST_KINDS = [
@@ -44,6 +44,8 @@ export interface NetworkMeta {
   maxHashtags: number | null
   /** Campos adicionales que pide la red. */
   extraFields: Array<{ key: string; label: string; maxChars: number; required: boolean }>
+  /** Nombre del formato en esta red cuando no coincide con el general (TikTok llama «vídeo» al formato vertical). */
+  kindLabels?: Partial<Record<PostKind, string>>
 }
 
 export const KIND_META: Record<PostKind, KindMeta> = {
@@ -135,7 +137,23 @@ export const NETWORK_META: Record<Network, NetworkMeta> = {
     foldAfter: null,
     maxHashtags: null,
     extraFields: [{ key: 'title', label: 'Título del vídeo', maxChars: 100, required: true }]
+  },
+  // Fase 9: solo análisis y publicación manual (ADR 0002). Límite de texto orientativo.
+  tiktok: {
+    label: 'TikTok',
+    kinds: ['short', 'carousel', 'story'],
+    defaultKind: 'short',
+    maxChars: 2200,
+    foldAfter: null,
+    maxHashtags: null,
+    extraFields: [],
+    kindLabels: { short: 'Vídeo', carousel: 'Carrusel de fotos' }
   }
+}
+
+/** Nombre del formato tal como lo llama cada red. */
+export function kindLabel(network: Network, kind: PostKind): string {
+  return NETWORK_META[network].kindLabels?.[kind] ?? KIND_META[kind].label
 }
 
 /** Separa el texto en hashtags y cuerpo, para contarlos y previsualizarlos. */

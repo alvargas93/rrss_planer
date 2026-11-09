@@ -86,3 +86,19 @@ diario agotado. Formato no válido: mensaje claro. Cortes de red: reanudar la su
 ## 8. Programación nativa (conectada el 2026-11-09)
 
 Si el destino sale en las próximas 24 h (y con al menos 15 minutos de margen), la app sube el vídeo como privado con status.publishAt y YouTube lo publica a su hora. No cuesta más cuota que una subida normal. Si falla la subida anticipada, se reintenta y, en último caso, se publica a la hora prevista como en las demás redes.
+
+## 9. Datos públicos con clave de API (Fase 9)
+
+Verificado el **2026-11-09** en developers.google.com/youtube/v3 (Getting started y Channels: list).
+
+- Los datos públicos se leen solo con una clave de API (`key=`), sin OAuth: la guía dice que las
+  peticiones sin autorizar «only retrieve public data».
+- `channels.list` admite `forHandle` (con o sin @) y cuesta 1 unidad. La app pide
+  `snippet,statistics,contentDetails`, después la lista de subidas (`playlistItems.list`) y las
+  estadísticas de los últimos 25 vídeos (`videos.list`): 3 unidades por lectura.
+- Cupo por defecto: 10.000 unidades al día por proyecto. La documentación no menciona coste.
+- Datos disponibles: suscriptores (salvo que el canal los oculte), número de vídeos,
+  visualizaciones totales y, por vídeo, visualizaciones, me gusta, comentarios, fecha y duración.
+  No hay alcance, tiempo de visionado ni veces compartido.
+- **[no confirmado]** cómo distinguir un Short: la API no lo indica. La app marca como «posible
+  Short» los vídeos de 3 minutos o menos.

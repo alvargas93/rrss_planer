@@ -41,6 +41,7 @@ import {
   OAuthConnectSchema
 } from '../domain/accounts'
 import {
+  MarkManualSchema,
   PostTargetSchema,
   PublishNowSchema,
   SetTargetSchema,
@@ -59,6 +60,20 @@ import {
   CueSchema
 } from '../domain/video'
 import { NETWORKS } from '../connectors/networks'
+import {
+  AnalysisSchema,
+  ApplyPlanSchema,
+  AuditRequestSchema,
+  PlanRequestSchema,
+  ProfileCreateSchema,
+  ProfileSchema,
+  ProfileUpdateSchema,
+  ReadScreenshotsResultSchema,
+  ReadScreenshotsSchema,
+  SnapshotCreateSchema,
+  SnapshotSchema,
+  SourcesStatusSchema
+} from '../domain/analysis'
 
 const ById = z.object({ id: IdSchema })
 
@@ -74,6 +89,8 @@ export const contracts = {
   'app:getInfo': { input: z.undefined(), output: AppInfoSchema },
   'app:openDataFolder': { input: z.undefined(), output: z.void() },
   'app:openExternal': { input: z.object({ url: z.url() }), output: z.void() },
+  /** Copia texto al portapapeles del sistema (publicación manual). */
+  'app:copyText': { input: z.object({ text: z.string().max(50_000) }), output: z.void() },
 
   'settings:get': { input: z.undefined(), output: SettingsSchema },
   'settings:update': { input: SettingsPatchSchema, output: SettingsSchema },
@@ -101,6 +118,11 @@ export const contracts = {
   'posts:update': { input: PostUpdateSchema, output: PostDetailSchema },
   'posts:schedule': { input: PostScheduleSchema, output: PostSummarySchema },
   'posts:delete': { input: ById, output: z.void() },
+  /** Guarda los archivos de la publicación en una carpeta elegida; null si se cancela. */
+  'posts:exportMedia': {
+    input: ById,
+    output: z.object({ dir: z.string(), files: z.array(z.string()) }).nullable()
+  },
 
   /** Abre el selector de archivos del sistema y copia los elegidos a la carpeta de medios. */
   'media:import': { input: z.undefined(), output: z.array(MediaAssetSchema) },
@@ -158,6 +180,8 @@ export const contracts = {
     input: z.object({ appSecret: z.string().trim().min(1) }),
     output: z.void()
   },
+  /** Marca (o desmarca) una red como publicada a mano. */
+  'publishing:markManual': { input: MarkManualSchema, output: z.array(PostTargetSchema) },
 
   // --- Claude ---
   'ai:status': { input: z.undefined(), output: AiStatusSchema },
@@ -224,7 +248,44 @@ export const contracts = {
   'updates:state': { input: z.undefined(), output: UpdateStateSchema },
   'updates:check': { input: z.undefined(), output: UpdateStateSchema },
   'updates:download': { input: z.undefined(), output: UpdateStateSchema },
-  'updates:install': { input: z.undefined(), output: z.void() }
+  'updates:install': { input: z.undefined(), output: z.void() },
+
+  // --- análisis de cuentas (Fase 9) ---
+  'analysis:profiles:list': { input: z.undefined(), output: z.array(ProfileSchema) },
+  'analysis:profiles:create': { input: ProfileCreateSchema, output: ProfileSchema },
+  'analysis:profiles:update': { input: ProfileUpdateSchema, output: ProfileSchema },
+  'analysis:profiles:delete': { input: ById, output: z.void() },
+  'analysis:snapshots:list': {
+    input: z.object({ profileId: IdSchema }),
+    output: z.array(SnapshotSchema)
+  },
+  /** Guarda datos revisados por el usuario (de capturas, a mano…). */
+  'analysis:snapshots:save': { input: SnapshotCreateSchema, output: SnapshotSchema },
+  'analysis:snapshots:delete': { input: ById, output: z.void() },
+  /** Abre el selector de imágenes del sistema; lista vacía si se cancela. */
+  'analysis:pickScreenshots': { input: z.undefined(), output: z.array(z.string()) },
+  /** Claude lee las capturas y devuelve un borrador de datos (no se guarda). */
+  'analysis:readScreenshots': {
+    input: ReadScreenshotsSchema,
+    output: ReadScreenshotsResultSchema
+  },
+  /** Datos automáticos y gratuitos (YouTube público, Instagram propia conectada). */
+  'analysis:refreshAuto': { input: z.object({ profileId: IdSchema }), output: SnapshotSchema },
+  'analysis:sources': { input: z.undefined(), output: SourcesStatusSchema },
+  'analysis:setYoutubeApiKey': {
+    input: z.object({ apiKey: z.string().trim().min(20, 'La clave parece incompleta') }),
+    output: SourcesStatusSchema
+  },
+  'analysis:clearYoutubeApiKey': { input: z.undefined(), output: SourcesStatusSchema },
+  'analysis:list': { input: z.object({ profileId: IdSchema }), output: z.array(AnalysisSchema) },
+  'analysis:audit': { input: AuditRequestSchema, output: AnalysisSchema },
+  'analysis:plan': { input: PlanRequestSchema, output: AnalysisSchema },
+  /** Crea borradores en el calendario con las piezas elegidas del plan. */
+  'analysis:applyPlan': {
+    input: ApplyPlanSchema,
+    output: z.object({ analysis: AnalysisSchema, created: z.array(IdSchema) })
+  },
+  'analysis:delete': { input: ById, output: z.void() }
 } as const
 
 export type Contracts = typeof contracts

@@ -46,7 +46,7 @@ describe('esquemas de publicación', () => {
   it('rechaza títulos vacíos y redes desconocidas', () => {
     expect(PostCreateSchema.safeParse({ title: '   ' }).success).toBe(false)
     expect(
-      PostCreateSchema.safeParse({ title: 'x', variants: [{ network: 'tiktok', kind: 'feed' }] })
+      PostCreateSchema.safeParse({ title: 'x', variants: [{ network: 'myspace', kind: 'feed' }] })
         .success
     ).toBe(false)
   })

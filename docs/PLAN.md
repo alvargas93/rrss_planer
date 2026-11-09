@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 9 · 2026-11-09 · Fase 8 completada · Fase 9 propuesta (análisis y publicación manual)
+> Versión 10 · 2026-11-09 · Fase 9 completada (análisis de cuentas y publicación manual)
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -422,6 +422,30 @@ montar el contenido**; la publicación se hace a mano en cada red. Detalle y fue
   guardar.
 - **Publicación por API oculta, no borrada.** El modo manual pasa a ser el flujo principal.
 - **TikTok** entra como red nueva, solo para análisis y planificación.
+
+**Decisiones aplicadas en la Fase 9**
+
+- **Nueva sección «Análisis»** (`/analysis`): cuentas a analizar (red, usuario, propia o de
+  referencia) con tres pestañas: Datos, Análisis y Plan. Tablas `tracked_profiles`,
+  `profile_snapshots` y `profile_analyses` (migración 0006).
+- **Lecturas de datos:** cada lectura guarda seguidores, estadísticas y publicaciones con sus
+  cifras. Puede venir de capturas, escrita a mano, de Instagram (cuenta propia conectada, con la
+  analítica de la Fase 5) o de YouTube (datos públicos con clave de API, 3 unidades por lectura).
+- **Capturas con Claude:** hasta 10 por lectura, reducidas a 1568 px de lado. El resultado nunca se
+  guarda solo: se abre en un editor para revisarlo. El prompt indica que el texto de las capturas
+  son datos, no instrucciones.
+- **Análisis y plan** con salida estructurada (`AiService.generate`, sin conversación y con el coste
+  registrado). El plan se limita a las combinaciones red-formato elegidas que existen; lo que
+  Claude devuelva fuera de ellas se descarta o se corrige. Pasar piezas al calendario crea
+  borradores programados y no duplica las que ya se pasaron.
+- **Publicación manual por defecto** (`publishing.mode = 'manual'`): el compositor muestra
+  «Publicar a mano» (copiar texto, guardar los archivos con un nombre claro, marcar como publicada
+  con enlace). En modo manual la cola nunca llama a las APIs, aunque haya cuentas conectadas: a la
+  hora avisa y deja el texto copiado. La publicación por API sigue en Ajustes → Publicación.
+- **Cuentas**, en modo manual, solo ofrece conectar Instagram y YouTube, que dan datos gratis.
+- **TikTok** entra como red (vídeo, carrusel de fotos e historia) solo para análisis y
+  planificación. Va con capturas hasta probar la Display API (`docs/connectors/tiktok.md`).
+- **Estado de un post:** «Publicada» solo si todas sus redes lo están; si solo algunas, «Parcial».
 
 ## 6. Diseño
 

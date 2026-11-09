@@ -266,16 +266,26 @@ const MESES = [
   await win.getByRole('button', { name: 'Guardar borrador' }).click()
   await win.getByText('Borrador', { exact: true }).waitFor()
   check(true, 'borrador guardado')
-  // Fase 4: el panel de publicación aparece con el destino en modo manual (sin cuenta)
-  const targetSelect = win.getByRole('combobox', { name: 'Cuenta de destino para Instagram' })
-  await targetSelect.waitFor()
-  const selectText = await targetSelect.innerText()
-  check(
-    selectText.includes('Manual'),
-    `destino de Instagram en modo manual sin cuenta (${selectText.trim()})`
-  )
-  await win.getByText(/necesita al menos 1 archivo/).waitFor()
-  check(true, 'validación de Instagram avisa de que falta el medio')
+  // Fase 9: por defecto se publica a mano (copiar el texto y marcar como publicada)
+  // El compositor tiene otro «Copiar texto» (vista previa): se busca dentro del kit.
+  const kit = win.getByRole('region', { name: 'Publicar a mano' })
+  await kit.waitFor()
+  check(true, 'compositor: kit de publicación manual en lugar de la publicación por API')
+  await kit.getByRole('button', { name: 'Copiar texto' }).click()
+  await kit.getByRole('button', { name: 'Copiado' }).waitFor()
+  const clip = await app.evaluate(({ clipboard }) => clipboard.readText())
+  check(clip.includes('#creadores'), 'copiar texto deja el texto de Instagram en el portapapeles')
+  await kit.getByRole('button', { name: 'Ya la publiqué' }).click()
+  await win
+    .getByLabel('Enlace a la publicación en Instagram (opcional)')
+    .fill('https://www.instagram.com/p/prueba')
+  await kit.getByRole('button', { name: 'Confirmar' }).click()
+  await kit.getByText('Marcada como publicada').waitFor()
+  check(true, 'marcar como publicada a mano, con enlace')
+  await win.screenshot({ path: join(shots, '12b-compositor-publicada.png') })
+  await kit.getByRole('button', { name: 'Desmarcar' }).click()
+  await kit.getByRole('button', { name: 'Ya la publiqué' }).waitFor()
+  check(true, 'desmarcar devuelve la red a pendiente')
   await win.screenshot({ path: join(shots, '12-compositor.png') })
 
   // Calendario: el borrador aparece en la bandeja y se arrastra a hoy
@@ -348,7 +358,7 @@ const MESES = [
   await go(win, 'Ajustes', 'text=Apariencia')
   await win.getByText('Claude', { exact: true }).waitFor()
   await win.getByLabel('Nueva clave de API').fill('sk-ant-prueba-humo-0000')
-  await win.getByRole('button', { name: 'Guardar clave' }).click()
+  await win.getByRole('button', { name: 'Guardar clave', exact: true }).click()
   await win.getByText('Configurada').waitFor()
   check(true, 'clave de prueba guardada cifrada')
   const hint = await win.getByText(/termina en/).innerText()
@@ -371,7 +381,19 @@ const MESES = [
   await go(win, 'Asistente', 'text=Claude conoce tus pilares')
   check(true, 'página del asistente disponible')
 
-  // Fase 4: cuentas y publicación
+  // Fase 9: en modo manual, Cuentas solo ofrece conectar lo que da datos gratis
+  await go(win, 'Cuentas', 'text=Sin cuentas conectadas')
+  await win.getByRole('button', { name: 'YouTube', exact: true }).waitFor()
+  check(
+    (await win.getByRole('button', { name: 'X', exact: true }).count()) === 0 &&
+      (await win.getByRole('button', { name: 'YouTube', exact: true }).count()) === 1,
+    'cuentas: en modo manual solo se conectan Instagram y YouTube para leer datos'
+  )
+  await go(win, 'Ajustes', 'text=Apariencia')
+  await win.getByRole('switch', { name: 'Publicar por API' }).click()
+  await win.waitForTimeout(300)
+
+  // Fase 4: cuentas y publicación (con la publicación por API activada)
   await go(win, 'Cuentas', 'text=Sin cuentas conectadas')
   await win.getByText('Falta el alojamiento de medios').waitFor()
   check(true, 'cuentas: aviso de alojamiento de medios sin configurar')
@@ -406,6 +428,13 @@ const MESES = [
   await go(win, 'Ajustes', 'text=Apariencia')
   await win.getByText('Alojamiento temporal de medios').waitFor()
   check(true, 'ajustes: tarjeta de publicación con alojamiento de medios')
+  await win.getByRole('switch', { name: 'Publicar por API' }).click()
+  await win.waitForTimeout(300)
+  check(
+    (await win.getByRole('switch', { name: 'Publicar por API' }).getAttribute('aria-checked')) ===
+      'false',
+    'ajustes: publicación por API desactivada de nuevo'
+  )
 
   // Fase 8: copias de seguridad, arranque con el sistema y actualizaciones.
   await win.getByText('Copias de seguridad').first().waitFor()
@@ -472,6 +501,129 @@ const MESES = [
   check(true, 'vídeo: proyecto eliminado')
 
   check(errors.length === 0, `sin errores de consola en la sesión 4 (${errors.length})`)
+  if (errors.length) console.log(errors.join('\n'))
+  await app.close()
+}
+
+// --- Sesión 5: Fase 9 · análisis de cuentas y plan (sin clave de Claude) -----
+{
+  const { app, win, errors } = await launch()
+  await win.waitForSelector('text=Próximos 7 días', { timeout: 15000 })
+  const user = `smoke_${tag}`
+  const channel = `canal_${tag}`
+
+  await go(win, 'Análisis', 'text=Elige una cuenta')
+  await win.getByRole('button', { name: 'Añadir cuenta' }).first().click()
+  await win.getByLabel('Nombre de usuario').fill(`https://www.instagram.com/${user}/`)
+  await win.getByRole('dialog').getByRole('button', { name: 'Añadir', exact: true }).click()
+  await win.getByRole('heading', { name: `@${user}` }).waitFor()
+  check(true, 'análisis: cuenta añadida pegando el enlace del perfil')
+  check(
+    await win.getByRole('button', { name: 'Leer capturas con Claude' }).isDisabled(),
+    'análisis: leer capturas deshabilitado sin clave de Claude'
+  )
+
+  // Datos escritos a mano, con una cifra mal escrita primero
+  await win.getByRole('button', { name: 'Escribir a mano' }).click()
+  const editor = win.getByRole('dialog')
+  await editor.getByLabel('Seguidores').fill('mucho')
+  await editor.getByRole('button', { name: 'Guardar datos' }).click()
+  await editor.getByText('Hay cifras que no son números').waitFor()
+  check(true, 'análisis: avisa de cifras no válidas antes de guardar')
+  await editor.getByLabel('Seguidores').fill('12.345')
+  await editor.getByRole('button', { name: 'Añadir publicación' }).click()
+  await editor.getByLabel('Formato de la publicación 1').fill('reel')
+  await editor.getByLabel('Vistas de la publicación 1').fill('2.500')
+  await win.screenshot({ path: join(shots, '60-analisis-editor.png') })
+  await editor.getByRole('button', { name: 'Guardar datos' }).click()
+  await win.getByText('12.345').first().waitFor()
+  check(true, 'análisis: datos a mano guardados y visibles (12.345 seguidores)')
+  await win.waitForTimeout(400)
+  await win.screenshot({ path: join(shots, '61-analisis-datos.png') })
+
+  // Capturas por IPC: la imagen se carga de verdad y, sin clave, el error lo explica
+  const profiles = await win.evaluate(() => window.api.invoke('analysis:profiles:list'))
+  const profileId = profiles.data?.find((p) => p.username === user)?.id
+  const read = (paths) =>
+    win.evaluate((args) => window.api.invoke('analysis:readScreenshots', args), {
+      profileId,
+      paths
+    })
+  const noKey = await read([join(shots, '01-inicio.png')])
+  check(
+    noKey.ok === false && noKey.error.code === 'NOT_CONFIGURED',
+    `capturas: la imagen se carga y sin clave de Claude lo explica (${noKey.error?.code})`
+  )
+  const notImage = await read([join(root, 'package.json')])
+  check(
+    notImage.ok === false && notImage.error.code === 'VALIDATION',
+    'capturas: rechaza archivos que no son imágenes'
+  )
+  const broken = await read([join(root, 'tmp', 'no-existe.png')])
+  check(
+    broken.ok === false && /No se pudo leer la imagen/.test(broken.error.message),
+    'capturas: una imagen ilegible da un error claro'
+  )
+
+  // Análisis y plan necesitan la clave de Claude
+  await win.getByRole('radio', { name: 'Análisis' }).click()
+  check(
+    await win.getByRole('button', { name: 'Analizar con Claude' }).isDisabled(),
+    'análisis: analizar deshabilitado sin clave de Claude'
+  )
+  await win.getByRole('radio', { name: 'Plan' }).click()
+  await win.getByText('Piezas por semana').waitFor()
+  check(
+    await win.getByRole('button', { name: 'Generar plan con Claude' }).isDisabled(),
+    'plan: generar deshabilitado sin clave de Claude'
+  )
+  await win.screenshot({ path: join(shots, '62-analisis-plan.png') })
+
+  // YouTube: datos públicos automáticos, pero sin clave de API se explica dónde ponerla
+  await win.getByRole('button', { name: 'Añadir cuenta' }).first().click()
+  await win.getByRole('combobox', { name: 'Red' }).click()
+  await win.getByRole('option', { name: 'YouTube' }).click()
+  await win.getByLabel('Nombre de usuario').fill(`@${channel}`)
+  await win.getByRole('dialog').getByRole('button', { name: 'Añadir', exact: true }).click()
+  await win.getByRole('heading', { name: `@${channel}` }).waitFor()
+  await win.getByRole('radio', { name: 'Datos' }).click()
+  check(
+    await win.getByRole('button', { name: 'Traer datos públicos de YouTube' }).isDisabled(),
+    'YouTube: datos automáticos deshabilitados sin clave de API'
+  )
+  await win.getByText('Ajustes → Datos automáticos').first().waitFor()
+  check(true, 'YouTube: explica dónde poner la clave de API')
+
+  await go(win, 'Ajustes', 'text=Apariencia')
+  await win.getByText('Datos automáticos').first().waitFor()
+  check(
+    (await win.getByRole('switch', { name: 'Publicar por API' }).getAttribute('aria-checked')) ===
+      'false',
+    'ajustes: la publicación por API está desactivada por defecto'
+  )
+  await win.screenshot({ path: join(shots, '63-ajustes-datos-automaticos.png') })
+
+  check(errors.length === 0, `sin errores de consola en la sesión 5 (${errors.length})`)
+  if (errors.length) console.log(errors.join('\n'))
+  await app.close()
+}
+
+// --- Sesión 6: el análisis persiste tras reabrir; limpieza ---------------------
+{
+  const { app, win, errors } = await launch()
+  await win.waitForSelector('text=Próximos 7 días', { timeout: 15000 })
+  await go(win, 'Análisis', 'text=Elige una cuenta')
+  await win.getByRole('button', { name: new RegExp(`^@smoke_${tag}`) }).click()
+  await win.getByText('12.345').first().waitFor()
+  check(true, 'análisis: la cuenta y sus datos siguen tras reabrir la app')
+  for (const name of [`smoke_${tag}`, `canal_${tag}`]) {
+    await win.getByRole('button', { name: new RegExp(`^@${name}`) }).click()
+    await win.getByRole('button', { name: `Quitar @${name}` }).click()
+    await confirmInDialog(win, 'Quitar')
+    await win.waitForTimeout(300)
+  }
+  check(true, 'análisis: cuentas de prueba quitadas')
+  check(errors.length === 0, `sin errores de consola en la sesión 6 (${errors.length})`)
   if (errors.length) console.log(errors.join('\n'))
   await app.close()
 }

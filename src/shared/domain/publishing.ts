@@ -53,6 +53,17 @@ export const SetTargetSchema = z.object({
   mode: TargetModeSchema.default('api')
 })
 
+/** Publicación manual: marcar (o desmarcar) una red como ya publicada a mano. */
+export const MarkManualSchema = z.object({
+  postId: IdSchema,
+  network: z.enum(NETWORKS),
+  published: z.boolean(),
+  url: z
+    .url({ protocol: /^https?$/ })
+    .nullable()
+    .default(null)
+})
+
 export const PublishNowSchema = z.object({
   postId: IdSchema,
   /** Si se indica, solo ese destino; si no, todos los pendientes del post. */

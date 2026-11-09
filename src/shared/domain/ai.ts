@@ -143,6 +143,7 @@ export const ScreenContextSchema = z.object({
       'assistant',
       'analytics',
       'video',
+      'analysis',
       'other'
     ])
     .default('other'),

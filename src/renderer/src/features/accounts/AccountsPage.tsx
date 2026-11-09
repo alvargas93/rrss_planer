@@ -1,7 +1,12 @@
 import * as React from 'react'
 import { Info, Plus, RefreshCw, Unplug, Users } from 'lucide-react'
-import { ACCOUNT_STATUS_LABELS, type Account, type OAuthNetwork } from '@shared/domain/accounts'
-import { NETWORKS, type Network } from '@shared/connectors/networks'
+import {
+  ACCOUNT_STATUS_LABELS,
+  OAUTH_NETWORKS,
+  type Account,
+  type OAuthNetwork
+} from '@shared/domain/accounts'
+import type { Network } from '@shared/connectors/networks'
 import { NETWORK_META } from '@shared/connectors/networks'
 import { PageHeader } from '@renderer/components/PageHeader'
 import { EmptyState } from '@renderer/components/EmptyState'
@@ -19,6 +24,7 @@ import {
 import { fmtDay, fmtRelative } from '@renderer/lib/dates'
 import { useScreenContext } from '@renderer/features/ai/useScreenContext'
 import { useHostStatus } from '@renderer/features/publishing/usePublishing'
+import { useSettings } from '@renderer/features/settings/useSettings'
 import { AccountAvatar } from './AccountAvatar'
 import { ConnectInstagramDialog } from './ConnectInstagramDialog'
 import { ConnectOAuthDialog } from './ConnectOAuthDialog'
@@ -151,12 +157,20 @@ export function AccountsPage(): React.JSX.Element {
   const [oauthNetwork, setOauthNetwork] = React.useState<OAuthNetwork | null>(null)
   const [toDisconnect, setToDisconnect] = React.useState<Account | null>(null)
 
+  const settings = useSettings()
+  const apiMode = settings.data?.publishing.mode === 'api'
+  // En modo manual (por defecto) las cuentas solo sirven para leer datos: Instagram y YouTube.
+  const connectable: Network[] = apiMode
+    ? ['instagram', ...OAUTH_NETWORKS]
+    : ['instagram', 'youtube']
+
   const connect = (network: Network): void => {
     if (network === 'instagram') setInstagramOpen(true)
-    else setOauthNetwork(network)
+    else if ((OAUTH_NETWORKS as readonly string[]).includes(network))
+      setOauthNetwork(network as OAuthNetwork)
   }
 
-  const connectButtons = NETWORKS.map((network) => (
+  const connectButtons = connectable.map((network) => (
     <Button key={network} variant="outline" onClick={() => connect(network)}>
       <Plus aria-hidden /> {NETWORK_META[network].label}
     </Button>
@@ -166,11 +180,15 @@ export function AccountsPage(): React.JSX.Element {
     <>
       <PageHeader
         title="Cuentas"
-        description="Las redes conectadas por API oficial. Sin cuenta conectada, cada red funciona en modo manual: la app te avisa a la hora y te deja el texto copiado."
+        description={
+          apiMode
+            ? 'Las redes conectadas por API oficial. Sin cuenta conectada, cada red funciona en modo manual: la app te avisa a la hora y te deja el texto copiado.'
+            : 'Publicas a mano, así que conectar una cuenta solo sirve para leer sus datos gratis: las métricas de tu Instagram y de tu canal de YouTube. Para publicar por API, actívalo en Ajustes → Publicación.'
+        }
         actions={<div className="flex flex-wrap gap-2">{connectButtons}</div>}
       />
 
-      {host.data && !host.data.configured && (
+      {apiMode && host.data && !host.data.configured && (
         <p className="mb-4 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm">
           <strong>Falta el alojamiento de medios.</strong> Instagram exige que las imágenes y vídeos
           estén en una URL pública al publicar. Configura Cloudinary en Ajustes → Publicación o las
@@ -197,11 +215,15 @@ export function AccountsPage(): React.JSX.Element {
           <EmptyState
             icon={Users}
             title="Sin cuentas conectadas"
-            description="Conecta una red para publicar y programar desde aquí. Cada una usa su API oficial y una app que creas tú en su portal de desarrolladores."
+            description={
+              apiMode
+                ? 'Conecta una red para publicar y programar desde aquí. Cada una usa su API oficial y una app que creas tú en su portal de desarrolladores.'
+                : 'No hace falta conectar nada para analizar cuentas: basta con capturas. Conecta tu Instagram si quieres que sus métricas lleguen solas.'
+            }
           />
         )}
         <div className="grid gap-4 lg:grid-cols-2">
-          {NETWORKS.map((network) => (
+          {connectable.map((network) => (
             <NetworkNotes key={network} network={network} />
           ))}
         </div>

@@ -38,6 +38,11 @@ export const GeneralSettingsSchema = z.object({
 
 /** Publicación: alojamiento temporal de medios y datos públicos de las apps de cada red. */
 export const PublishingSettingsSchema = z.object({
+  /**
+   * manual = la app prepara todo y avisa, y el usuario publica a mano (por defecto desde la
+   * Fase 9, ADR 0002). api = publica por las APIs de las cuentas conectadas.
+   */
+  mode: z.enum(['manual', 'api']).default('manual'),
   /** none = modo manual; cloudinary = subir, publicar y borrar. */
   mediaHost: z.enum(['none', 'cloudinary']).default('none'),
   cloudinaryCloudName: z.string().trim().default(''),

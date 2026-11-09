@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListTodo,
+  ScanSearch,
   Settings,
   Sparkles,
   SquarePen,
@@ -20,10 +21,11 @@ export interface NavItem {
   phase: number
 }
 
-export const CURRENT_PHASE = 6
+export const CURRENT_PHASE = 9
 
 export const mainNav: NavItem[] = [
   { to: '/', label: 'Inicio', icon: LayoutDashboard, phase: 1 },
+  { to: '/analysis', label: 'Análisis', icon: ScanSearch, phase: 9 },
   { to: '/tasks', label: 'Tareas', icon: ListTodo, phase: 2 },
   { to: '/ideas', label: 'Ideas', icon: Lightbulb, phase: 2 },
   { to: '/calendar', label: 'Calendario', icon: CalendarDays, phase: 2 },
