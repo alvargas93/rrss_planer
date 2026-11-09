@@ -263,19 +263,33 @@ export class PublishingService {
     const hosted: Array<{ remove: () => Promise<void> }> = []
     try {
       const host = this.deps.mediaHost()
-      const media: Array<{ asset: PostDetail['media'][number]; publicUrl: string }> = []
+      const caps = connector.capabilities()
+      const rule = caps.kinds[variant.kind]
+      const media: Array<{
+        asset: PostDetail['media'][number]
+        publicUrl: string
+        filePath: string
+      }> = []
       for (const original of detail.media) {
+        // Imágenes en un formato que la red no admite (PNG, WebP): se convierten a JPEG.
         const asset =
-          original.kind === 'image' && original.mime !== 'image/jpeg'
+          original.kind === 'image' && rule && !rule.imageMimes.includes(original.mime)
             ? await this.deps.prepareImage(original)
             : original
-        const uploaded = await host.upload(asset, join(this.deps.mediaDir, asset.fileName))
-        hosted.push(uploaded)
-        media.push({ asset, publicUrl: uploaded.publicUrl })
+        const filePath = join(this.deps.mediaDir, asset.fileName)
+        if (caps.requiresPublicMediaUrl) {
+          // Instagram exige una URL pública: alojamiento temporal.
+          const uploaded = await host.upload(asset, filePath)
+          hosted.push(uploaded)
+          media.push({ asset, publicUrl: uploaded.publicUrl, filePath })
+        } else {
+          // YouTube, LinkedIn y X reciben los bytes directamente desde el equipo.
+          media.push({ asset, publicUrl: '', filePath })
+        }
       }
       const result = await connector.publish({
         account,
-        accessToken: this.deps.accounts.tokenFor(account.id),
+        accessToken: await this.deps.accounts.freshToken(account.id),
         variant,
         media,
         onProgress: (message) => log.info(`[${account.username}] ${message}`)
@@ -291,10 +305,11 @@ export class PublishingService {
       if (this.deps.settings.get().publishing.notifyOnPublish) {
         this.notifyPost(
           target.postId,
-          'Publicado en Instagram',
+          `Publicado en ${NETWORK_META[target.network].label}`,
           `«${detail.post.title}» ya está en @${account.username}.`
         )
       }
+      if (result.notice) this.notifyPost(target.postId, 'Revisa esta publicación', result.notice)
       log.info(`Publicado ${detail.post.title} en ${target.network} (${result.externalPostId})`)
     } catch (error) {
       const appError = AppError.from(error)

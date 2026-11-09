@@ -6,6 +6,7 @@ import { AppError } from '@shared/domain/errors'
 import type { AccountsRepository } from '../repositories/accounts.repository'
 import type { SecretStore } from '../secrets/secrets.service'
 import type { ConnectorRegistry } from '../connectors/registry'
+import type { OAuthClient, OAuthResult } from '../connectors/oauth-pkce'
 import { createLogger } from '../log'
 
 const log = createLogger('accounts')
@@ -24,7 +25,11 @@ export class AccountsService {
     private readonly repo: AccountsRepository,
     private readonly secrets: SecretStore,
     private readonly connectors: ConnectorRegistry,
-    private readonly runOAuth: OAuthRunner
+    private readonly runOAuth: OAuthRunner,
+    /** Flujos OAuth de YouTube, LinkedIn y X (con la app propia del usuario). */
+    private readonly runners: Partial<
+      Record<Network, (client: OAuthClient) => Promise<OAuthResult>>
+    > = {}
   ) {}
 
   list(now = new Date()): Account[] {
@@ -98,27 +103,66 @@ export class AccountsService {
     )
   }
 
+  /**
+   * Conecta YouTube, LinkedIn o X con OAuth y la app que el usuario creó en cada red.
+   * YouTube y X entregan un refresh token: el acceso dura horas y se renueva solo antes
+   * de cada uso. LinkedIn entrega un acceso de 60 días que no se puede renovar sin volver
+   * a autorizar.
+   */
+  async connectOAuth(network: Network, client: OAuthClient): Promise<Account> {
+    const runner = this.runners[network]
+    if (!runner) throw new AppError('NOT_CONFIGURED', `${network} no se conecta con OAuth.`)
+    const result = await runner(client)
+    const connector = this.connectors.get(network)
+    const identity = await connector.identify(result.accessToken)
+    const renewable = result.refreshToken !== null
+    const meta: Record<string, unknown> = { ...identity.meta, source: 'oauth' }
+    if (renewable) meta['accessExpiresAt'] = result.expiresAt
+    return this.store(
+      network,
+      result.accessToken,
+      renewable ? null : result.expiresAt,
+      result.scopes,
+      meta,
+      identity,
+      result.refreshToken
+    )
+  }
+
+  /** LinkedIn con un token generado en el portal de desarrolladores (60 días). */
+  async connectLinkedInWithToken(accessToken: string): Promise<Account> {
+    const identity = await this.connectors.get('linkedin').identify(accessToken)
+    return this.store(
+      'linkedin',
+      accessToken,
+      new Date(Date.now() + ASSUMED_TOKEN_DAYS * DAY_MS).toISOString(),
+      [],
+      { ...identity.meta, expiryAssumed: true, source: 'portal_token' },
+      identity,
+      null
+    )
+  }
+
+  /**
+   * Token válido para usar ahora. Si es de corta duración y está a punto de caducar
+   * (YouTube y X), lo renueva con el refresh token guardado.
+   */
+  async freshToken(id: string, now = new Date()): Promise<string> {
+    const account = this.repo.get(id)
+    const accessExpiresAt = account.meta['accessExpiresAt']
+    if (
+      typeof accessExpiresAt === 'string' &&
+      new Date(accessExpiresAt).getTime() - now.getTime() < 5 * 60_000
+    ) {
+      await this.renew(id)
+    }
+    return this.tokenFor(id)
+  }
+
   async refresh(id: string): Promise<Account> {
     const account = this.repo.get(id)
-    const connector = this.connectors.get(account.network)
     try {
-      const refreshed = await connector.refreshToken(this.tokenFor(id))
-      this.secrets.set(this.repo.secretKeyOf(id), refreshed.accessToken)
-      const identity = await connector.identify(refreshed.accessToken).catch(() => null)
-      return this.repo.update(id, {
-        tokenExpiresAt: refreshed.expiresAt,
-        tokenRefreshedAt: new Date().toISOString(),
-        lastError: null,
-        status: 'connected',
-        ...(identity
-          ? {
-              username: identity.username,
-              displayName: identity.displayName,
-              avatarUrl: identity.avatarUrl,
-              meta: { ...account.meta, ...identity.meta, expiryAssumed: false }
-            }
-          : {})
-      })
+      return await this.renew(id)
     } catch (error) {
       const appError = AppError.from(error)
       log.warn(`No se pudo refrescar ${account.username}: ${appError.message}`)
@@ -126,10 +170,53 @@ export class AccountsService {
     }
   }
 
+  /** Renueva el acceso de una cuenta; lanza el error si la red lo rechaza. */
+  private async renew(id: string): Promise<Account> {
+    const account = this.repo.get(id)
+    const connector = this.connectors.get(account.network)
+    const secretKey = this.repo.secretKeyOf(id)
+    const refreshKey = `${secretKey}.refresh`
+    const refreshed = await connector.refreshToken(this.tokenFor(id), this.secrets.get(refreshKey))
+    this.secrets.set(secretKey, refreshed.accessToken)
+    if (refreshed.refreshToken) this.secrets.set(refreshKey, refreshed.refreshToken)
+    const shortLived = typeof account.meta['accessExpiresAt'] === 'string'
+    if (shortLived) {
+      // Acceso de horas: solo cambia la caducidad interna, la cuenta sigue conectada.
+      return this.repo.update(id, {
+        tokenRefreshedAt: new Date().toISOString(),
+        lastError: null,
+        status: 'connected',
+        meta: { ...account.meta, accessExpiresAt: refreshed.expiresAt }
+      })
+    }
+    const identity = await connector.identify(refreshed.accessToken).catch(() => null)
+    return this.repo.update(id, {
+      tokenExpiresAt: refreshed.expiresAt,
+      tokenRefreshedAt: new Date().toISOString(),
+      lastError: null,
+      status: 'connected',
+      ...(identity
+        ? {
+            username: identity.username,
+            displayName: identity.displayName,
+            avatarUrl: identity.avatarUrl,
+            meta: { ...account.meta, ...identity.meta, expiryAssumed: false }
+          }
+        : {})
+    })
+  }
+
   /** Refresca los tokens que caducan en menos de N días. Lo llama el planificador a diario. */
   async refreshExpiring(now = new Date()): Promise<void> {
     for (const account of this.repo.list()) {
       if (!account.tokenExpiresAt) continue
+      // Si la red no permite renovar sin volver a autorizar (LinkedIn), solo se avisa en la interfaz.
+      if (
+        this.connectors.has(account.network) &&
+        !this.connectors.get(account.network).capabilities().autoRefresh
+      ) {
+        continue
+      }
       const daysLeft = (new Date(account.tokenExpiresAt).getTime() - now.getTime()) / DAY_MS
       const refreshedRecently =
         account.tokenRefreshedAt &&
@@ -144,6 +231,7 @@ export class AccountsService {
     const key = this.repo.secretKeyOf(id)
     this.repo.delete(id)
     this.secrets.delete(key)
+    this.secrets.delete(`${key}.refresh`)
   }
 
   /** Marca el error de la cuenta (p. ej. token caducado detectado al publicar). */
@@ -156,7 +244,7 @@ export class AccountsService {
   private store(
     network: Network,
     token: string,
-    expiresAt: string,
+    expiresAt: string | null,
     scopes: string[],
     meta: Record<string, unknown>,
     identity: {
@@ -165,10 +253,12 @@ export class AccountsService {
       displayName: string
       avatarUrl: string | null
       accountType: string
-    }
+    },
+    refreshToken: string | null = null
   ): Account {
     const secretKey = `account.${network}.${identity.externalId}`
     this.secrets.set(secretKey, token)
+    if (refreshToken) this.secrets.set(`${secretKey}.refresh`, refreshToken)
     const account = this.repo.upsert({
       network,
       externalId: identity.externalId,

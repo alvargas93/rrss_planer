@@ -37,6 +37,8 @@ export const CapabilitiesSchema = z.object({
   /** Si las publicaciones por API necesitan una URL pública para los medios. */
   requiresPublicMediaUrl: z.boolean(),
   metrics: z.boolean(),
+  /** Si el acceso se renueva solo (false: hay que volver a autorizar, como LinkedIn). */
+  autoRefresh: z.boolean(),
   /** Texto corto para la interfaz: qué no se puede hacer por API. */
   notes: z.array(z.string())
 })
@@ -47,7 +49,13 @@ export interface PublishInput {
   accessToken: string
   variant: PostVariant
   /** Medios ya alojados en URLs públicas, en orden. */
-  media: Array<{ asset: MediaAsset; publicUrl: string }>
+  media: Array<{
+    asset: MediaAsset
+    /** URL pública (solo si la red la exige); cadena vacía si no. */
+    publicUrl: string
+    /** Ruta del archivo en el equipo, para las redes que reciben los bytes. */
+    filePath: string
+  }>
   /** Para registrar progreso ("subiendo", "procesando…"). */
   onProgress?: (message: string) => void
 }
@@ -55,6 +63,8 @@ export interface PublishInput {
 export interface PublishResult {
   externalPostId: string
   externalUrl: string | null
+  /** Aviso para el usuario aunque se haya publicado (p. ej. YouTube lo dejó en privado). */
+  notice?: string | null
 }
 
 export interface ConnectedIdentity {
@@ -118,8 +128,14 @@ export interface Connector {
   capabilities(): Capabilities
   /** Comprueba un token y devuelve la identidad de la cuenta. */
   identify(accessToken: string): Promise<ConnectedIdentity>
-  /** Devuelve un token nuevo y su caducidad, si la red lo permite. */
-  refreshToken(accessToken: string): Promise<{ accessToken: string; expiresAt: string | null }>
+  /**
+   * Devuelve un token nuevo y su caducidad, si la red lo permite. Si la red entrega un
+   * refresh token nuevo se devuelve también; `null` o ausente significa conservar el actual.
+   */
+  refreshToken(
+    accessToken: string,
+    refreshToken?: string | null
+  ): Promise<{ accessToken: string; expiresAt: string | null; refreshToken?: string | null }>
   /** Valida sin red: longitud, formatos, tamaños. */
   validate(variant: PostVariant, media: MediaAsset[]): ValidationIssue[]
   publish(input: PublishInput): Promise<PublishResult>

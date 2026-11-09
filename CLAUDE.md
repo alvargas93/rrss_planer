@@ -108,3 +108,10 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - `npm install` de paquetes nuevos puede fallar con "edgesOut" (bug de npm 10.8 con
   vitest); reintentar con `--legacy-peer-deps`.
 - Datos de desarrollo en `%APPDATA%\RRSS Planner-dev\data`; la app instalada usa `RRSS Planner`.
+
+## Fase 7 (YouTube, LinkedIn, X)
+
+- Las apps de cada red las crea el usuario; el ID de cliente va en Ajustes y el secreto en `secrets`.
+- Accesos de corta duración (YouTube, X): usar siempre `AccountsService.freshToken`, nunca `tokenFor`, antes de llamar a la red.
+- Peticiones HTTP de los conectores nuevos con `connectors/net.ts` (errores traducidos); tests con `fetch` simulado.
+- X cobra por uso: no añadir llamadas de lectura automáticas sin avisar del coste.

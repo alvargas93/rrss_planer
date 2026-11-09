@@ -18,10 +18,7 @@ export class ConnectorRegistry {
   get(network: Network): Connector {
     const connector = this.connectors.get(network)
     if (!connector) {
-      throw new AppError(
-        'NOT_CONFIGURED',
-        `La red "${network}" todavía no tiene conector (llega en la Fase 7).`
-      )
+      throw new AppError('NOT_CONFIGURED', `La red "${network}" no tiene conector registrado.`)
     }
     return connector
   }

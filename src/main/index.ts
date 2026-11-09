@@ -30,6 +30,16 @@ import { AiService } from './ai/ai.service'
 import { SafeStorageSecretStore } from './secrets/secrets.service'
 import { ConnectorRegistry } from './connectors/registry'
 import { runInstagramOAuth } from './connectors/instagram/oauth'
+import { InstagramConnector } from './connectors/instagram/instagram.connector'
+import { YoutubeConnector } from './connectors/youtube/youtube.connector'
+import { runYoutubeOAuth } from './connectors/youtube/oauth'
+import { LinkedInConnector } from './connectors/linkedin/linkedin.connector'
+import { runLinkedInOAuth } from './connectors/linkedin/oauth'
+import { XConnector } from './connectors/x/x.connector'
+import { runXOAuth } from './connectors/x/oauth'
+import { CLIENT_ID_SETTING, clientSecretKey } from './connectors/clients'
+import type { OAuthClient } from './connectors/oauth-pkce'
+import type { OAuthNetwork } from '@shared/domain/accounts'
 import { CloudinaryMediaHost } from './media-host/cloudinary'
 import { NoMediaHost, type MediaHost } from './media-host/media-host'
 import { createNotifier } from './notifications'
@@ -155,8 +165,22 @@ function bootstrap(): SettingsService {
     encryptionAvailable: () => safeStorage.isEncryptionAvailable()
   })
 
-  const connectors = new ConnectorRegistry()
-  const accounts = new AccountsService(accountsRepo, secrets, connectors, runInstagramOAuth)
+  const openUrl = (url: string): void => void shell.openExternal(url)
+  const clientFor = (network: OAuthNetwork) => (): OAuthClient => ({
+    clientId: settings.get().publishing[CLIENT_ID_SETTING[network]],
+    clientSecret: secrets.get(clientSecretKey(network)) ?? ''
+  })
+  const connectors = new ConnectorRegistry([
+    new InstagramConnector(),
+    new YoutubeConnector(clientFor('youtube')),
+    new LinkedInConnector(),
+    new XConnector(clientFor('x'))
+  ])
+  const accounts = new AccountsService(accountsRepo, secrets, connectors, runInstagramOAuth, {
+    youtube: (client) => runYoutubeOAuth(client, openUrl),
+    linkedin: (client) => runLinkedInOAuth(client, openUrl),
+    x: (client) => runXOAuth(client, openUrl)
+  })
   const noHost = new NoMediaHost()
   const cloudinary = new CloudinaryMediaHost(() => {
     const p = settings.get().publishing

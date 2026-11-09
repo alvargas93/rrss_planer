@@ -1,5 +1,5 @@
 import {
-  ACCOUNT_METRICS,
+  accountMetricsFor,
   METRIC_LABELS,
   dayOf,
   relativeChange,
@@ -45,7 +45,14 @@ export class AnalyticsService {
         mediaStored: 0
       }
     }
-    const accessToken = this.accounts.tokenFor(accountId)
+    let accessToken: string
+    try {
+      accessToken = await this.accounts.freshToken(accountId)
+    } catch (error) {
+      const appError = AppError.from(error)
+      if (appError.code === 'UNAUTHORIZED') this.accounts.markError(accountId, appError.message)
+      return { accountId, ok: false, message: appError.message, pointsStored: 0, mediaStored: 0 }
+    }
     const previous = this.repo.syncInfo(accountId)
     let pointsStored = 0
     let mediaStored = 0
@@ -141,7 +148,7 @@ export class AnalyticsService {
 
     const sum = (points: MetricPoint[], metric: string): number =>
       points.filter((p) => p.metric === metric).reduce((a, p) => a + p.value, 0)
-    const stats: Stat[] = ACCOUNT_METRICS.map((metric) => {
+    const stats: Stat[] = accountMetricsFor(this.accounts.get(accountId).network).map((metric) => {
       const label = METRIC_LABELS[metric] ?? metric
       if (metric === 'followers_count') {
         const last = followersNow.at(-1)?.value ?? null

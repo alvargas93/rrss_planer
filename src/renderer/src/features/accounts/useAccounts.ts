@@ -48,3 +48,28 @@ export function useRefreshAccount(): UseMutationResult<Account, Error, { id: str
 export function useDisconnectAccount(): UseMutationResult<void, Error, { id: string }> {
   return useIpcMutation('accounts:disconnect', related)
 }
+
+export function useConnectOAuth(): UseMutationResult<
+  Account,
+  Error,
+  ChannelInput<'accounts:connectOAuth'>
+> {
+  return useIpcMutation('accounts:connectOAuth', [...related, ['settings']])
+}
+
+export function useConnectLinkedInToken(): UseMutationResult<
+  Account,
+  Error,
+  ChannelInput<'accounts:connectLinkedInToken'>
+> {
+  return useIpcMutation('accounts:connectLinkedInToken', related)
+}
+
+export function useOAuthClients(): UseQueryResult<
+  Record<string, { clientId: string; hasSecret: boolean }>,
+  Error
+> {
+  return useIpcQuery(['accounts', 'oauthClients'], 'accounts:oauthClients', undefined, {
+    staleTime: 0
+  })
+}

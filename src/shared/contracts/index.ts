@@ -30,7 +30,9 @@ import {
   AccountByIdSchema,
   AccountSchema,
   InstagramOAuthConnectSchema,
-  InstagramTokenConnectSchema
+  InstagramTokenConnectSchema,
+  LinkedInTokenConnectSchema,
+  OAuthConnectSchema
 } from '../domain/accounts'
 import {
   PostTargetSchema,
@@ -110,6 +112,14 @@ export const contracts = {
   'accounts:list': { input: z.undefined(), output: z.array(AccountSchema) },
   'accounts:connectInstagramToken': { input: InstagramTokenConnectSchema, output: AccountSchema },
   'accounts:connectInstagramOAuth': { input: InstagramOAuthConnectSchema, output: AccountSchema },
+  /** YouTube, LinkedIn o X: abre el navegador y espera la autorización (OAuth con app propia). */
+  'accounts:connectOAuth': { input: OAuthConnectSchema, output: AccountSchema },
+  'accounts:connectLinkedInToken': { input: LinkedInTokenConnectSchema, output: AccountSchema },
+  /** Qué apps de red tienen ya su ID de cliente y su secreto guardados. */
+  'accounts:oauthClients': {
+    input: z.undefined(),
+    output: z.record(z.string(), z.object({ clientId: z.string(), hasSecret: z.boolean() }))
+  },
   'accounts:refresh': { input: AccountByIdSchema, output: AccountSchema },
   'accounts:disconnect': { input: AccountByIdSchema, output: z.void() },
   'accounts:capabilities': {

@@ -169,6 +169,7 @@ function setup(): { service: AnalyticsService; repo: FakeAnalyticsRepo; connecto
     get: () => account,
     list: () => [account],
     tokenFor: () => 'token',
+    freshToken: async () => 'token',
     markError: vi.fn()
   } as unknown as AccountsService
   const service = new AnalyticsService(

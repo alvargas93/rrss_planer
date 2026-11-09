@@ -15,6 +15,22 @@ export const ACCOUNT_METRICS = [
 ] as const
 export type AccountMetric = (typeof ACCOUNT_METRICS)[number]
 
+/** Métricas de cuenta que se muestran según la red. Instagram usa `ACCOUNT_METRICS`. */
+export function accountMetricsFor(network: string): readonly string[] {
+  if (network === 'youtube') {
+    return [
+      'followers_count',
+      'views',
+      'minutes_watched',
+      'likes',
+      'comments',
+      'shares',
+      'subscribers_gained'
+    ]
+  }
+  return ACCOUNT_METRICS
+}
+
 export const METRIC_LABELS: Record<string, string> = {
   followers_count: 'Seguidores',
   reach: 'Alcance',
@@ -26,6 +42,9 @@ export const METRIC_LABELS: Record<string, string> = {
   total_interactions: 'Interacciones',
   profile_links_taps: 'Toques en enlaces',
   saved: 'Guardados',
+  minutes_watched: 'Minutos vistos',
+  subscribers_gained: 'Suscriptores nuevos',
+  subscribers_lost: 'Suscriptores perdidos',
   ig_reels_avg_watch_time: 'Tiempo medio de visionado (ms)'
 }
 

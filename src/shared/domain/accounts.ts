@@ -42,6 +42,22 @@ export const InstagramOAuthConnectSchema = z.object({
   appSecret: z.string().trim().min(1)
 })
 
+/** Redes que se conectan con el flujo OAuth de escritorio y una app propia del usuario. */
+export const OAUTH_NETWORKS = ['youtube', 'linkedin', 'x'] as const
+export type OAuthNetwork = (typeof OAUTH_NETWORKS)[number]
+
+/** Conectar YouTube, LinkedIn o X: ID público de la app y, si la red lo da, su secreto. */
+export const OAuthConnectSchema = z.object({
+  network: z.enum(OAUTH_NETWORKS),
+  clientId: z.string().trim().min(1, 'Falta el ID de cliente'),
+  clientSecret: z.string().trim().default('')
+})
+
+/** LinkedIn: token generado en el portal de desarrolladores (vía fiable, 60 días). */
+export const LinkedInTokenConnectSchema = z.object({
+  accessToken: z.string().trim().min(20, 'El token parece incompleto')
+})
+
 export const AccountByIdSchema = z.object({ id: IdSchema })
 
 /** Umbral para marcar un token como "caduca pronto" y refrescarlo. */

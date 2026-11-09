@@ -33,6 +33,10 @@ export const PublishingSettingsSchema = z.object({
   cloudinaryApiKey: z.string().trim().default(''),
   /** Instagram App ID (público); el secreto va cifrado en `secrets`. */
   instagramAppId: z.string().trim().default(''),
+  /** ID de cliente (público) de las apps de YouTube, LinkedIn y X; los secretos van cifrados. */
+  youtubeClientId: z.string().trim().default(''),
+  linkedinClientId: z.string().trim().default(''),
+  xClientId: z.string().trim().default(''),
   /** Avisos del sistema al publicar o fallar. */
   notifyOnPublish: z.boolean().default(true),
   /** Minutos de antelación del aviso en modo manual. */

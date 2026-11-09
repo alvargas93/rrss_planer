@@ -18,6 +18,8 @@ import type { VideoService } from '../services/video.service'
 import type { SecretStore } from '../secrets/secrets.service'
 import type { MediaHost } from '../media-host/media-host'
 import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
+import { OAUTH_NETWORKS } from '@shared/domain/accounts'
+import { CLIENT_ID_SETTING, clientSecretKey } from '../connectors/clients'
 
 export const PUBLISHING_SECRET_KEYS = {
   cloudinaryApiSecret: 'cloudinary.apiSecret',
@@ -116,6 +118,30 @@ export function registerAllIpc(deps: IpcDependencies): void {
     deps.secrets.set(PUBLISHING_SECRET_KEYS.instagramAppSecret, appSecret)
     deps.settings.update({ publishing: { instagramAppId: appId } })
     return deps.accounts.connectInstagramOAuth({ appId, appSecret })
+  })
+  handle('accounts:connectOAuth', async ({ network, clientId, clientSecret }) => {
+    const secretKey = clientSecretKey(network)
+    if (clientSecret) deps.secrets.set(secretKey, clientSecret)
+    deps.settings.update({ publishing: { [CLIENT_ID_SETTING[network]]: clientId } })
+    return deps.accounts.connectOAuth(network, {
+      clientId,
+      clientSecret: clientSecret || deps.secrets.get(secretKey) || ''
+    })
+  })
+  handle('accounts:connectLinkedInToken', ({ accessToken }) =>
+    deps.accounts.connectLinkedInWithToken(accessToken)
+  )
+  handle('accounts:oauthClients', () => {
+    const publishing = deps.settings.get().publishing
+    return Object.fromEntries(
+      OAUTH_NETWORKS.map((network) => [
+        network,
+        {
+          clientId: publishing[CLIENT_ID_SETTING[network]],
+          hasSecret: deps.secrets.has(clientSecretKey(network))
+        }
+      ])
+    )
   })
   handle('accounts:refresh', ({ id }) => deps.accounts.refresh(id))
   handle('accounts:disconnect', ({ id }) => deps.accounts.disconnect(id))

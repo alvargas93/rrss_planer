@@ -288,10 +288,29 @@ const MESES = [
   check(true, 'cuentas: aviso de alojamiento de medios sin configurar')
   await win.getByText('Qué permite Instagram por API').waitFor()
   check(true, 'cuentas: capacidades verificadas de Instagram visibles')
-  await win.getByRole('button', { name: 'Conectar Instagram' }).first().click()
+  await win.getByRole('button', { name: 'Instagram', exact: true }).click()
   await win.getByRole('dialog').getByText('Generate token').waitFor()
   check(true, 'diálogo de conexión con instrucciones del token')
   await win.screenshot({ path: join(shots, '30-cuentas-conectar.png') })
+  await win.keyboard.press('Escape')
+
+  // Fase 7: las otras tres redes tienen sus notas verificadas y su diálogo de conexión.
+  for (const red of ['YouTube', 'LinkedIn', 'X']) {
+    await win.getByText(`Qué permite ${red} por API`).waitFor()
+  }
+  check(true, 'cuentas: capacidades verificadas de YouTube, LinkedIn y X visibles')
+  await win.getByRole('button', { name: 'YouTube', exact: true }).click()
+  const oauthDialog = win.getByRole('dialog')
+  await oauthDialog.getByText('Aplicación de escritorio').first().waitFor()
+  check(
+    await oauthDialog.getByRole('button', { name: 'Conectar', exact: true }).isDisabled(),
+    'YouTube: conectar deshabilitado sin ID de cliente'
+  )
+  await win.screenshot({ path: join(shots, '30b-cuentas-youtube.png') })
+  await win.keyboard.press('Escape')
+  await win.getByRole('button', { name: 'X', exact: true }).click()
+  await win.getByRole('dialog').getByText('0,20 $').first().waitFor()
+  check(true, 'X: el diálogo avisa del coste de los enlaces')
   await win.keyboard.press('Escape')
   await win.screenshot({ path: join(shots, '31-cuentas.png') })
 

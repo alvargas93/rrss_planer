@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 7 · 2026-11-06 · Fase 6 completada
+> Versión 8 · 2026-11-09 · Fase 7 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -353,6 +353,37 @@ Ficha completa verificada: `docs/connectors/instagram.md`.
   Claude (acción `captions`) sincronizados con la duración. **Transcripción en local** con Whisper base (`Xenova/whisper-base`, ejecutado con ONNX Runtime). El modelo se descarga una sola vez a la carpeta de datos (la primera transcripción tarda más). Por defecto transcribe en español; el audio no sale del equipo.
 - La vista previa muestra el clip original; el resultado real solo se ve en el MP4 exportado.
 
+### 5.6 Decisiones aplicadas en Fase 7 (YouTube, LinkedIn y X)
+
+Fichas verificadas el 2026-11-09 en `docs/connectors/youtube.md`, `linkedin.md` y `x.md`.
+
+- **Apps propias.** Cada red exige una app creada por el usuario en su portal. La app guarda el
+  ID de cliente en Ajustes y el secreto cifrado (`secrets`, claves `<red>.clientSecret`).
+- **OAuth de escritorio** en `connectors/oauth-pkce.ts`: navegador del sistema, servidor local
+  efímero, `state` anti-CSRF y PKCE donde la red lo admite (YouTube y X). Probado con un
+  navegador simulado.
+- **Acceso de corta duración (YouTube ≈ 1 h, X ≈ 2 h).** Se guarda también el refresh token
+  cifrado y `AccountsService.freshToken` renueva antes de cada uso. La cuenta no pasa a
+  "caducada" cada hora; solo falla si la red revoca el permiso. X rota el refresh token en
+  cada renovación y la app guarda el nuevo.
+- **LinkedIn no renueva sin volver a autorizar** (60 días). La app avisa 10 días antes y ofrece
+  "Reconectar". Hay dos vías: OAuth con servidor local (no confirmado que LinkedIn acepte
+  `http://localhost`) y el token del generador oficial del portal.
+- **Los medios se envían desde el equipo** en las tres redes nuevas (subida reanudable en
+  YouTube, partes de 4 MB en LinkedIn, trozos de 5 MB en X). El alojamiento temporal de
+  Cloudinary solo se usa si la red exige URL pública (Instagram). Las imágenes en un formato
+  que la red no admite se convierten a JPEG.
+- **Métricas.** YouTube: vistas, minutos vistos, me gusta, comentarios, compartidos y
+  suscriptores por día, más sus vídeos recientes. LinkedIn: no hay por API en autoservicio. X:
+  se dejan desactivadas porque leer se cobra.
+- **Coste de X.** Pago por uso sin nivel gratuito; un post con enlace cuesta 13 veces más. El
+  compositor lo avisa antes de publicar.
+- **Pendiente.** (1) La programación nativa de YouTube (`publishAt`) está soportada por la
+  ficha pero no conectada: la app sube a la hora prevista como en el resto de redes.
+  (2) Hay datos contradictorios sobre si YouTube deja en privado los vídeos de proyectos sin
+  auditar; la app lo comprueba tras subir y avisa. (3) Hilos largos de X y publicar como
+  página de empresa en LinkedIn.
+
 ## 6. Diseño
 
 - **Tokens** en `renderer/design/tokens.css`: `--color-bg`, `--color-surface`, `--color-text`,
@@ -418,7 +449,7 @@ documentación oficial justo antes de programarla.
 | Instagram (Meta) | Exige cuenta **profesional** (Business o Creator). Publicar imágenes, carruseles y reels por API suele estar disponible; **historias** por API históricamente limitadas o no disponibles para apps de terceros → probable modo manual. Requiere app en Meta for Developers y permisos que pueden necesitar **revisión de la app** para salir del modo desarrollo; para uso personal, el modo desarrollo con tu propia cuenta como tester puede bastar. Gratis. |
 | YouTube (Google) | YouTube Data API v3: subir vídeos y Shorts, programar con `publishAt`, métricas vía YouTube Analytics API. Gratis con **cuota diaria** (una subida consume una parte grande). Proyecto en Google Cloud con pantalla de consentimiento OAuth; en modo "pruebas" los **tokens de actualización caducan a los 7 días**, lo que obliga a reconectar semanalmente o a publicar la pantalla de consentimiento.                                                       |
 | LinkedIn         | Publicar en **perfil personal** suele ser autoservicio ("Share on LinkedIn"); publicar en **páginas de empresa** y leer analíticas requiere acceso a programas con aprobación. Métricas de posts personales por API: limitadas o no disponibles → se verificará. Gratis.                                                                                                                                                                                       |
-| X                | La API es **de pago** por niveles; el nivel gratuito ha sido históricamente solo escritura con cupo bajo, y las métricas requieren niveles superiores. Hay que confirmar precios y cupos vigentes antes de la Fase 7; es la red con más probabilidad de acabar en modo manual si no quieres pagar.                                                                                                                                                             |
+| X                | La API es **de pago** por niveles; el nivel gratuito ha sido históricamente solo escritura con cupo bajo, y las métricas requieren niveles superiores. **Verificado el 2026-11-09:** pago por uso (0,015 $ por post; 0,20 $ si lleva enlace), sin nivel gratuito. Ver `docs/connectors/x.md`.                                                                                                                                                                  |
 
 ---
 

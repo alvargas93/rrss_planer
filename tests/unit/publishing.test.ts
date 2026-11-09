@@ -296,6 +296,7 @@ function setup(
     list: () => (options.withAccount === false ? [] : [account]),
     get: () => account,
     tokenFor: () => 'token',
+    freshToken: async () => 'token',
     markError: vi.fn()
   } as unknown as AccountsService
   const settings = new SettingsService(new InMemorySettingsRepository())

@@ -89,6 +89,7 @@ export const INSTAGRAM_CAPABILITIES: Capabilities = {
   nativeScheduling: false,
   requiresPublicMediaUrl: true,
   metrics: true,
+  autoRefresh: true,
   notes: [
     'Solo imágenes JPEG; PNG y WebP se convierten antes de publicar.',
     'Instagram no programa por sí mismo: la app debe estar abierta (o en la bandeja) a la hora prevista.',
