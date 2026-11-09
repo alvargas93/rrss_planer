@@ -48,7 +48,7 @@ una versión nueva:
 3. Sube a un sitio web accesible los tres archivos de `dist/` indicados arriba. Con GitHub:
    crea una _Release_ con la etiqueta `v0.2.0` y adjúntalos.
 4. En Ajustes pon la dirección de esa carpeta. Con GitHub Releases suele ser
-   `https://github.com/USUARIO/REPO/releases/latest/download/` (**no verificado hoy**; el
+   `https://github.com/alvargas93/rrss_planer/releases/latest/download/` (**no verificado hoy**; el
    repositorio debe ser público).
 
 Ni la descarga ni la instalación son automáticas: la app avisa y tú pulsas «Descargar» y luego
@@ -82,20 +82,19 @@ Desinstalar la app **no** borra esa carpeta.
 
 ## 7. Publicar versiones con GitHub Releases (decidido el 2026-11-09)
 
-Para que la app pueda leer las versiones, el sitio donde se publican debe ser **público**. Para no hacer público tu código, se usa un repositorio aparte que solo contiene las versiones.
+El repositorio `alvargas93/rrss_planer` es **público** desde el 2026-11-09, así que sirve directamente para publicar versiones. No hace falta un segundo repositorio. Ten en cuenta que el código y el historial de commits los puede ver cualquiera.
 
 **Una sola vez**
 
-1. En github.com crea un repositorio nuevo, por ejemplo `rrss-planner-versiones`, marcado como **Public** y vacío. No subas código ahí.
-2. En la app, Ajustes → Actualizaciones, pega esta dirección cambiando TU_USUARIO:
-   `https://github.com/TU_USUARIO/rrss-planner-versiones/releases/latest/download/`
+1. En la app, Ajustes → Actualizaciones, pega esta dirección:
+   `https://github.com/alvargas93/rrss_planer/releases/latest/download/`
 
 **Cada versión nueva**
 
 1. Sube `version` en `package.json`, por ejemplo a 0.2.0.
 2. Ejecuta `npm run build:win`.
-3. En el repositorio de versiones: Releases → Draft a new release → etiqueta `v0.2.0`.
+3. En github.com/alvargas93/rrss_planer: Releases → Draft a new release → etiqueta `v0.2.0`.
 4. Adjunta los tres archivos de `dist/`: `rrss-planner-0.2.0-setup.exe`, `latest.yml` y `rrss-planner-0.2.0-setup.exe.blockmap`. Pulsa Publish release.
 5. En la app instalada, Ajustes → Actualizaciones → «Buscar actualizaciones». Debe ofrecer la versión nueva.
 
-**Primera prueba recomendada:** instala la 0.1.0, publica una 0.1.1 de prueba y comprueba que la app la ofrece, la descarga y se reinicia con ella. Que GitHub sirva así `latest.yml` **no está verificado todavía**.
+**Primera prueba recomendada:** instala la 0.1.0, publica una 0.1.1 de prueba y comprueba que la app la ofrece, la descarga y se reinicia con ella. Que GitHub sirva así `latest.yml` **no está verificado todavía**: aún no existe ninguna release.
