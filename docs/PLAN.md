@@ -376,7 +376,7 @@ Fichas verificadas el 2026-11-09 en `docs/connectors/youtube.md`, `linkedin.md` 
 - **Métricas.** YouTube: vistas, minutos vistos, me gusta, comentarios, compartidos y
   suscriptores por día, más sus vídeos recientes. LinkedIn: no hay por API en autoservicio. X:
   se dejan desactivadas porque leer se cobra.
-- **Coste de X.** Pago por uso sin nivel gratuito; un post con enlace cuesta 13 veces más. El
+- **Decisión del propietario (2026-11-09): X en modo manual.** No se conecta cuenta de X; el conector queda listo por si cambia. **Coste de X.** Pago por uso sin nivel gratuito; un post con enlace cuesta 13 veces más. El
   compositor lo avisa antes de publicar.
 - **Pendiente.** (1) La programación nativa de YouTube (`publishAt`) está soportada por la
   ficha pero no conectada: la app sube a la hora prevista como en el resto de redes.
