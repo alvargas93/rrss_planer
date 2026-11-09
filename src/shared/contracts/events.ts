@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { AiStreamEventSchema } from '../domain/ai'
 import { IdSchema } from '../domain/common'
 import { ExportProgressSchema } from '../domain/video'
+import { UpdateStateSchema } from '../domain/system'
 
 /**
  * Eventos que el proceso principal EMPUJA a la interfaz (sin que esta pregunte).
@@ -14,7 +15,9 @@ export const eventContracts = {
   /** Un post cambió de estado por la cola de publicación. */
   'publishing:update': z.object({ postId: IdSchema }),
   /** Avance de una exportación de vídeo. */
-  'video:progress': ExportProgressSchema
+  'video:progress': ExportProgressSchema,
+  /** Estado de la búsqueda o descarga de una actualización. */
+  'updates:state': UpdateStateSchema
 } as const
 
 export type EventName = keyof typeof eventContracts

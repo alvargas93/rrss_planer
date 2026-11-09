@@ -1,4 +1,8 @@
-import { app, shell } from 'electron'
+import { app, dialog, shell } from 'electron'
+import type { BackupService } from '../services/backup.service'
+import type { UpdateService } from '../services/update.service'
+import type { SnapshotInfo } from '../backup/backup'
+import { applyLoginItem } from '../system/login-item'
 import { handle } from './registry'
 import { AppError } from '@shared/domain/errors'
 import type { AppInfo } from '@shared/domain/app-info'
@@ -41,6 +45,10 @@ export interface IpcDependencies {
   mediaHost: () => MediaHost
   analytics: AnalyticsService
   video: VideoService
+  backup: BackupService
+  listBackups: (dir: string) => Promise<SnapshotInfo[]>
+  restoreBackup: (dir: string, snapshot: string) => Promise<void>
+  updates: UpdateService
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -71,7 +79,31 @@ export function registerAllIpc(deps: IpcDependencies): void {
 
   // --- settings ---
   handle('settings:get', () => deps.settings.get())
-  handle('settings:update', (patch) => deps.settings.update(patch))
+  handle('settings:update', (patch) => {
+    const next = deps.settings.update(patch)
+    applyLoginItem(next)
+    return next
+  })
+
+  // --- copias de seguridad y actualizaciones ---
+  handle('backup:status', () => deps.backup.status())
+  handle('backup:chooseDir', async () => {
+    const result = await dialog.showOpenDialog({
+      title: 'Elige la carpeta donde guardar las copias',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+  handle('backup:run', async () => {
+    const { snapshot, mediaCopied, mediaBytes } = await deps.backup.runNow()
+    return { snapshot, mediaCopied, mediaBytes }
+  })
+  handle('backup:list', ({ dir }) => deps.listBackups(dir))
+  handle('backup:restore', ({ dir, snapshot }) => deps.restoreBackup(dir, snapshot))
+  handle('updates:state', () => deps.updates.get())
+  handle('updates:check', () => deps.updates.check())
+  handle('updates:download', () => deps.updates.download())
+  handle('updates:install', () => deps.updates.install())
   handle('settings:reset', () => deps.settings.reset())
 
   // --- pillars ---

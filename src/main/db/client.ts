@@ -18,7 +18,12 @@ export interface OpenDbOptions {
  * Abre la base de datos, aplica los PRAGMA recomendados y ejecuta las migraciones
  * pendientes. Devuelve el cliente Drizzle tipado con el esquema.
  */
-export function openDatabase(options: OpenDbOptions): { db: Db; close: () => void } {
+export function openDatabase(options: OpenDbOptions): {
+  db: Db
+  /** Conexión nativa, para la copia en caliente de las copias de seguridad. */
+  sqlite: Database.Database
+  close: () => void
+} {
   const sqlite = new Database(options.path)
   // WAL: lecturas y escrituras concurrentes sin bloquear; más robusto ante cierres bruscos.
   sqlite.pragma('journal_mode = WAL')
@@ -33,6 +38,7 @@ export function openDatabase(options: OpenDbOptions): { db: Db; close: () => voi
 
   return {
     db,
+    sqlite,
     close: () => {
       sqlite.close()
     }

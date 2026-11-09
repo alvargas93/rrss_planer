@@ -49,12 +49,24 @@ import { handleMediaProtocol, registerMediaScheme } from './media/protocol'
 import type { EventName, EventPayload } from '@shared/contracts/events'
 import { PUBLISHING_SECRET_KEYS, registerAllIpc } from './ipc/register-all'
 import { createLogger } from './log'
+import { readFileSync } from 'node:fs'
+import { autoUpdater } from 'electron-updater'
+import { BackupService } from './services/backup.service'
+import { UpdateService, type UpdaterLike } from './services/update.service'
+import { applyPendingRestore, createBackup, listSnapshots, stageRestore } from './backup/backup'
+import { dumpWithoutSecrets, mergeSecrets } from './backup/sqlite'
+import { applyLoginItem, startedHidden } from './system/login-item'
 
 const log = createLogger('main')
 
 // Ambas deben ir antes de whenReady.
 configureUserDataPath()
 registerMediaScheme()
+
+// Una sola copia de la app: si ya está abierta (o en la bandeja), la segunda solo la muestra.
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+if (!gotSingleInstanceLock) app.quit()
+else app.on('second-instance', () => showMainWindow())
 
 let mainWindow: BrowserWindow | null = null
 let closeDb: (() => void) | null = null
@@ -96,7 +108,14 @@ function createWindow(settings: SettingsService): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => mainWindow?.show())
+  mainWindow.on('ready-to-show', () => {
+    // Arranque con el sistema: sin ventana, solo la bandeja (si no hay bandeja, se muestra).
+    if (startedHidden() && settings.get().general.keepRunningInTray) {
+      ensureTray(icon, { show: showMainWindow, quit: () => app.quit() })
+      return
+    }
+    mainWindow?.show()
+  })
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -139,8 +158,27 @@ async function pickMediaFiles(): Promise<string[]> {
   return result.canceled ? [] : result.filePaths
 }
 
+/** Número de migraciones de esta versión: sirve para saber si una copia se puede restaurar. */
+function readSchemaVersion(): number {
+  try {
+    const journal = JSON.parse(
+      readFileSync(join(getMigrationsDir(), 'meta', '_journal.json'), 'utf8')
+    ) as { entries: unknown[] }
+    return journal.entries.length
+  } catch (error) {
+    log.warn(
+      'No se pudo leer el diario de migraciones',
+      error instanceof Error ? error.message : error
+    )
+    return 0
+  }
+}
+
 function bootstrap(): SettingsService {
-  const { db, close } = openDatabase({ path: getDbPath(), migrationsFolder: getMigrationsDir() })
+  const { db, sqlite, close } = openDatabase({
+    path: getDbPath(),
+    migrationsFolder: getMigrationsDir()
+  })
   closeDb = close
 
   const pillars = new PillarsRepository(db)
@@ -223,6 +261,26 @@ function bootstrap(): SettingsService {
   setTimeout(() => void media.processPending(), 8000)
   const analytics = new AnalyticsService(new AnalyticsRepository(db), accounts, connectors, targets)
 
+  const schemaVersion = readSchemaVersion()
+  const backupDeps = {
+    dataDir: getDataDir(),
+    mediaDir: getMediaDir(),
+    appVersion: app.getVersion(),
+    schemaVersion,
+    dumpDatabase: (dest: string) => dumpWithoutSecrets(sqlite, dest)
+  }
+  const backup = new BackupService({
+    settings,
+    backup: (dir, auto) => createBackup(backupDeps, dir, { auto })
+  })
+  const updates = new UpdateService({
+    updater: autoUpdater as unknown as UpdaterLike,
+    settings,
+    emit: (state) => broadcast('updates:state', state),
+    currentVersion: app.getVersion(),
+    isPackaged: app.isPackaged
+  })
+
   registerAllIpc({
     settings,
     pillars,
@@ -237,24 +295,53 @@ function bootstrap(): SettingsService {
     secrets,
     mediaHost,
     analytics,
-    video
+    video,
+    backup,
+    listBackups: (dir) => listSnapshots(dir, schemaVersion),
+    restoreBackup: async (dir, snapshot) => {
+      await stageRestore(
+        { dataDir: getDataDir(), mediaDir: getMediaDir(), schemaVersion },
+        dir,
+        snapshot
+      )
+      // Se responde primero a la interfaz y luego se reinicia: al arrancar se aplica la copia.
+      setTimeout(() => {
+        quitting = true
+        scheduler?.stop()
+        closeDb?.()
+        app.relaunch()
+        app.exit(0)
+      }, 800)
+    },
+    updates
   })
   handleMediaProtocol(getMediaDir())
 
   scheduler = new Scheduler({
     runDue: () => publishing.runDue(),
     refreshTokens: () => accounts.refreshExpiring(),
-    syncAnalytics: () => analytics.syncAll().then(() => undefined)
+    syncAnalytics: () => analytics.syncAll().then(() => undefined),
+    backupIfDue: () => backup.runIfDue(),
+    checkUpdates: () => updates.autoCheck()
   })
   return settings
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return
   electronApp.setAppUserModelId('com.vargas.rrssplanner')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // Si se pidió restaurar una copia, se aplica ahora, antes de abrir la base de datos.
+  try {
+    const safety = await applyPendingRestore(getDataDir(), mergeSecrets)
+    if (safety) log.info(`Copia restaurada. La base anterior está en ${safety}`)
+  } catch (error) {
+    log.error('No se pudo aplicar la restauración', error instanceof Error ? error.message : error)
+  }
 
   let settings: SettingsService
   try {
@@ -270,6 +357,7 @@ app.whenReady().then(() => {
     return
   }
 
+  applyLoginItem(settings.get())
   createWindow(settings)
   // El planificador arranca unos segundos después para no competir con la carga de la ventana.
   setTimeout(() => scheduler?.start(), 5000)

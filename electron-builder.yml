@@ -2,11 +2,19 @@ appId: com.vargas.rrssplanner
 productName: RRSS Planner
 directories:
   buildResources: build
+# Los `files` de cada plataforma SUSTITUYEN a los generales, así que la lista común se repite
+# en `win` y en `mac`. Cada plataforma añade al final sus propias exclusiones de binarios.
 files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!docs/*'
-  - '!tests/*'
+  - '!**/.vscode/**'
+  - '!src/**'
+  - '!docs/**'
+  - '!tests/**'
+  - '!.git/**'
+  - '!.claude/**'
+  - '!dist/**'
+  - '!tmp/**'
+  - '!drizzle/**'
+  - '!AGENTS.md'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,CLAUDE.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
@@ -23,12 +31,53 @@ asarUnpack:
   - 'node_modules/onnxruntime-node/**'
 win:
   executableName: RRSS Planner
+  # Solo los binarios de Windows x64: sin los de Mac, Linux ni Windows ARM/32 bits.
+  files:
+    - '!**/.vscode/**'
+    - '!src/**'
+    - '!docs/**'
+    - '!tests/**'
+    - '!.git/**'
+    - '!.claude/**'
+    - '!dist/**'
+    - '!tmp/**'
+    - '!drizzle/**'
+    - '!AGENTS.md'
+    - '!electron.vite.config.{js,ts,mjs,cjs}'
+    - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,CLAUDE.md}'
+    - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+    - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,drizzle.config.ts,vitest.config.ts}'
+    - '!node_modules/ffprobe-static/bin/{darwin,linux}/**'
+    - '!node_modules/ffprobe-static/bin/win32/ia32/**'
+    - '!node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**'
+    - '!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**'
+    - '!node_modules/better-sqlite3/prebuilds/{darwin,linux,linuxmusl}-*.node'
+    - '!node_modules/better-sqlite3/prebuilds/win32-arm64.node'
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
 mac:
+  # Solo los binarios de macOS (sin probar: hace falta un Mac para construirlo).
+  files:
+    - '!**/.vscode/**'
+    - '!src/**'
+    - '!docs/**'
+    - '!tests/**'
+    - '!.git/**'
+    - '!.claude/**'
+    - '!dist/**'
+    - '!tmp/**'
+    - '!drizzle/**'
+    - '!AGENTS.md'
+    - '!electron.vite.config.{js,ts,mjs,cjs}'
+    - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md,CLAUDE.md}'
+    - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+    - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,drizzle.config.ts,vitest.config.ts}'
+    - '!node_modules/ffprobe-static/bin/{linux,win32}/**'
+    - '!node_modules/onnxruntime-node/bin/napi-v6/{linux,win32}/**'
+    - '!node_modules/better-sqlite3/prebuilds/{linux,linuxmusl,win32}-*.node'
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
     - NSDocumentsFolderUsageDescription: La aplicación necesita acceso a tus documentos para importar medios.
@@ -37,6 +86,7 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+# La dirección real de las versiones se elige en Ajustes → Actualizaciones.
 publish:
   provider: generic
   url: https://example.com/auto-updates

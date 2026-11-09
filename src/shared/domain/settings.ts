@@ -22,7 +22,18 @@ export const AppearanceSettingsSchema = z.object({
 export const GeneralSettingsSchema = z.object({
   language: LanguageSchema.default('es'),
   /** Al cerrar la ventana, ¿seguir en la bandeja? Se usa desde Fase 4 (programador). */
-  keepRunningInTray: z.boolean().default(true)
+  keepRunningInTray: z.boolean().default(true),
+  /** Abrir la app al iniciar sesión en el equipo (arranca en la bandeja, sin ventana). */
+  launchAtLogin: z.boolean().default(false),
+  /** Carpeta donde se guardan las copias de seguridad ('' = sin elegir). */
+  backupDir: z.string().default(''),
+  /** Cada cuántos días se hace una copia automática; 0 = desactivadas. */
+  backupEveryDays: z.number().int().min(0).max(90).default(7),
+  lastBackupAt: z.string().nullable().default(null),
+  /** Dirección donde se publican las versiones nuevas (p. ej. GitHub Releases). */
+  updateFeedUrl: z.string().trim().default(''),
+  /** Buscar versiones nuevas una vez al día. */
+  autoCheckUpdates: z.boolean().default(true)
 })
 
 /** Publicación: alojamiento temporal de medios y datos públicos de las apps de cada red. */

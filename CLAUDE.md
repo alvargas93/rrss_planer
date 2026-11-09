@@ -115,3 +115,10 @@ Especificación de referencia: `docs/PLAN.md`. Decisiones de arquitectura: `docs
 - Accesos de corta duración (YouTube, X): usar siempre `AccountsService.freshToken`, nunca `tokenFor`, antes de llamar a la red.
 - Peticiones HTTP de los conectores nuevos con `connectors/net.ts` (errores traducidos); tests con `fetch` simulado.
 - X cobra por uso: no añadir llamadas de lectura automáticas sin avisar del coste.
+
+## Fase 8 (distribución)
+
+- Copias de seguridad: `main/backup/` (fs puro, con tests) y `backup/sqlite.ts` (necesita Electron; se prueba en `npm run smoke`). Nunca copiar `secrets`.
+- La restauración se aplica al arrancar, antes de abrir la base (`applyPendingRestore`). No restaurar con la base abierta.
+- `npm run build:win` genera el instalador; `node tests/e2e/packaged.mjs` prueba el paquete tras `npx electron-builder --dir`.
+- Guia de uso para el propietario: `docs/DISTRIBUCION.md`.

@@ -9,6 +9,10 @@ export interface SchedulerDeps {
   refreshTokens: () => Promise<void>
   /** Trae las métricas de las cuentas conectadas. */
   syncAnalytics: () => Promise<void>
+  /** Copia de seguridad automática, si toca (decide el propio servicio). */
+  backupIfDue?: () => Promise<unknown>
+  /** Búsqueda diaria de actualizaciones. */
+  checkUpdates?: () => Promise<void>
 }
 
 /**
@@ -42,10 +46,12 @@ export class Scheduler {
     this.busy = true
     try {
       await this.deps.runDue()
+      await this.deps.backupIfDue?.()
       if (Date.now() - this.lastTokenCheck > 24 * 60 * 60_000) {
         this.lastTokenCheck = Date.now()
         await this.deps.refreshTokens()
         await this.deps.syncAnalytics()
+        await this.deps.checkUpdates?.()
       }
     } catch (error) {
       log.error('Fallo en el planificador', error instanceof Error ? error.message : error)

@@ -6,8 +6,18 @@
  */
 import { _electron as electron } from 'playwright-core'
 import { createRequire } from 'node:module'
-import { existsSync, mkdirSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync
+} from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
+import ts from 'typescript'
 
 const require = createRequire(import.meta.url)
 const electronPath = require('electron')
@@ -20,6 +30,85 @@ const check = (ok, label) => {
   console.log(`${ok ? 'OK ' : 'FAIL'} ${label}`)
   if (!ok) problems.push(label)
 }
+
+/**
+ * Copia de seguridad con SQLite real. better-sqlite3 está compilado para Electron, así que
+ * el módulo `backup/sqlite.ts` se ejecuta con el propio Electron funcionando como Node.
+ */
+function checkSqliteBackup() {
+  const dir = join(root, 'tmp', 'sqlite-check')
+  mkdirSync(dir, { recursive: true })
+  const source = readFileSync(join(root, 'src/main/backup/sqlite.ts'), 'utf8')
+  const js = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2022,
+      esModuleInterop: true
+    }
+  }).outputText
+  writeFileSync(join(dir, 'sqlite.cjs'), js)
+  const files = {
+    live: join(dir, 'live.db'),
+    dump: join(dir, 'dump.db'),
+    restored: join(dir, 'restored.db')
+  }
+  for (const f of Object.values(files)) for (const s of ['', '-wal', '-shm']) rmSafe(f + s)
+  writeFileSync(
+    join(dir, 'run.cjs'),
+    `
+const Database = require('better-sqlite3')
+const { dumpWithoutSecrets, mergeSecrets } = require('./sqlite.cjs')
+const f = ${JSON.stringify(files)}
+const count = (file, table) => { const d = new Database(file, { readonly: true }); try { return d.prepare('SELECT count(*) AS n FROM ' + table).get().n } finally { d.close() } }
+;(async () => {
+  const live = new Database(f.live)
+  live.pragma('journal_mode = WAL')
+  live.exec("CREATE TABLE secrets (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT); CREATE TABLE posts (id TEXT PRIMARY KEY, title TEXT)")
+  live.exec("INSERT INTO secrets VALUES ('anthropic.apiKey','cifrado1','t'), ('account.x.1','cifrado2','t'); INSERT INTO posts VALUES ('p1','Hola')")
+  await dumpWithoutSecrets(live, f.dump)
+  const out = { dumpSecrets: count(f.dump, 'secrets'), dumpPosts: count(f.dump, 'posts'), liveSecrets: count(f.live, 'secrets') }
+  out.dumpHasKeyName = require('fs').readFileSync(f.dump).includes('anthropic.apiKey')
+  require('fs').copyFileSync(f.dump, f.restored)
+  live.close()
+  mergeSecrets(f.restored, f.live)
+  out.restoredSecrets = count(f.restored, 'secrets')
+  out.restoredPosts = count(f.restored, 'posts')
+  console.log('RESULT ' + JSON.stringify(out))
+})().catch((e) => { console.log('ERROR ' + e.message); process.exit(1) })
+`
+  )
+  const run = spawnSync(electronPath, [join(dir, 'run.cjs')], {
+    env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+    encoding: 'utf8',
+    cwd: dir
+  })
+  const line = (run.stdout ?? '').split('\n').find((l) => l.startsWith('RESULT '))
+  const r = line ? JSON.parse(line.slice(7)) : null
+  if (!r) console.log(run.stdout, run.stderr)
+  check(r !== null, 'copia SQLite real: se ejecuta con Electron como Node')
+  if (r) {
+    check(
+      r.dumpSecrets === 0 && !r.dumpHasKeyName,
+      'copia SQLite real: la copia no lleva claves ni tokens'
+    )
+    check(
+      r.dumpPosts === 1 && r.liveSecrets === 2,
+      'copia SQLite real: conserva los datos y no toca la base viva'
+    )
+    check(
+      r.restoredSecrets === 2 && r.restoredPosts === 1,
+      'restauración SQLite real: conserva las claves de este equipo'
+    )
+  }
+}
+function rmSafe(path) {
+  try {
+    if (existsSync(path)) writeFileSync(path, '')
+  } catch {
+    // se sobrescribe al crear la base
+  }
+}
+checkSqliteBackup()
 
 async function launch() {
   const app = await electron.launch({ executablePath: electronPath, args: ['.'], cwd: root })
@@ -317,6 +406,41 @@ const MESES = [
   await go(win, 'Ajustes', 'text=Apariencia')
   await win.getByText('Alojamiento temporal de medios').waitFor()
   check(true, 'ajustes: tarjeta de publicación con alojamiento de medios')
+
+  // Fase 8: copias de seguridad, arranque con el sistema y actualizaciones.
+  await win.getByText('Copias de seguridad').first().waitFor()
+  await win.getByText('Abrir al iniciar sesión').first().waitFor()
+  await win.getByText('Dirección de las versiones').first().waitFor()
+  check(true, 'ajustes: copias de seguridad, arranque con el sistema y actualizaciones')
+  await win.getByRole('button', { name: 'Restaurar una copia' }).click()
+  await win.getByRole('dialog').getByText('Restaurar una copia').first().waitFor()
+  check(true, 'ajustes: diálogo de restauración')
+  await win.screenshot({ path: join(shots, '32-restaurar.png') })
+  await win.keyboard.press('Escape')
+  await win.getByRole('button', { name: 'Buscar actualizaciones' }).click()
+  await win.getByText('Solo funciona en la app instalada').first().waitFor()
+  check(true, 'ajustes: en desarrollo las actualizaciones lo explican')
+  const backupDir = mkdtempSync(join(tmpdir(), 'rrss-smoke-copias-'))
+  await win.evaluate(
+    (dir) => window.api.invoke('settings:update', { general: { backupDir: dir } }),
+    backupDir
+  )
+  const made = await win.evaluate(() => window.api.invoke('backup:run'))
+  const folder = join(backupDir, 'RRSS Planner - copias')
+  const snapshot = existsSync(folder) ? readdirSync(folder).find((n) => n !== 'media') : undefined
+  check(
+    made.ok === true &&
+      !!snapshot &&
+      existsSync(join(folder, snapshot, 'rrss-planner.db')) &&
+      existsSync(join(folder, snapshot, 'manifest.json')),
+    'copia de seguridad real de la app: base de datos y manifest guardados'
+  )
+  const listed = await win.evaluate((dir) => window.api.invoke('backup:list', { dir }), backupDir)
+  check(
+    listed.ok === true && listed.data?.length === 1 && listed.data[0].compatible === true,
+    'copia listada y compatible'
+  )
+  await win.evaluate(() => window.api.invoke('settings:update', { general: { backupDir: '' } }))
 
   // Fase 5: analítica sin cuentas muestra el estado vacío y enlaza a Cuentas
   await go(win, 'Analítica', 'text=Métricas de tus cuentas conectadas')

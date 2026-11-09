@@ -25,6 +25,8 @@ import { useAppInfo, useResetSettings, useSettings, useUpdateSettings } from './
 import { AccentSamples } from './AccentSamples'
 import { AiSettingsCard } from './AiSettingsCard'
 import { PublishingSettingsCard } from './PublishingSettingsCard'
+import { BackupCard } from './BackupCard'
+import { UpdatesCard } from './UpdatesCard'
 
 function Row({
   label,
@@ -92,7 +94,7 @@ export function SettingsPage(): React.JSX.Element {
     <>
       <PageHeader
         title="Ajustes"
-        description="Apariencia, idioma y dónde se guardan tus datos. Los ajustes de Claude y de las redes llegan en sus fases."
+        description="Apariencia, Claude, publicación, copias de seguridad y actualizaciones. Tus datos se guardan en este equipo."
       />
 
       <div className="flex flex-col gap-4">
@@ -161,7 +163,7 @@ export function SettingsPage(): React.JSX.Element {
             </Row>
             <Row
               label="Seguir en la bandeja al cerrar"
-              hint="Necesario para que las publicaciones programadas salgan a su hora (se activa en la Fase 4)."
+              hint="Necesario para que las publicaciones programadas salgan a su hora."
             >
               <Switch
                 aria-label="Seguir en la bandeja al cerrar"
@@ -171,12 +173,26 @@ export function SettingsPage(): React.JSX.Element {
                 }
               />
             </Row>
+            <Row
+              label="Abrir al iniciar sesión"
+              hint="Arranca en la bandeja, sin ventana, para que las publicaciones salgan aunque no abras la app. Solo en la app instalada."
+            >
+              <Switch
+                aria-label="Abrir al iniciar sesión"
+                checked={settings.general.launchAtLogin}
+                onCheckedChange={(launchAtLogin) => update.mutate({ general: { launchAtLogin } })}
+              />
+            </Row>
           </CardContent>
         </Card>
 
         <AiSettingsCard settings={settings} />
 
         <PublishingSettingsCard settings={settings} />
+
+        <BackupCard settings={settings} />
+
+        <UpdatesCard settings={settings} />
 
         <Card>
           <CardHeader>

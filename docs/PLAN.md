@@ -387,6 +387,27 @@ Fichas verificadas el 2026-11-09 en `docs/connectors/youtube.md`, `linkedin.md` 
   proyectos sin auditar; la app lo comprueba tras subir y avisa. (2) Hilos largos de X y
   publicar como página de empresa en LinkedIn.
 
+### 5.7 Decisiones aplicadas en Fase 8 (distribución)
+
+Guía de uso en `docs/DISTRIBUCION.md`.
+
+- **Copias de seguridad en una carpeta normal**, sin formato propio: una carpeta `media/` común
+  (solo se copia lo nuevo) y una carpeta por copia con la base de datos y un `manifest.json`.
+  La base se copia en caliente con la API de copia de SQLite. Las automáticas conservan las 8
+  últimas; las manuales no se borran.
+- **Las claves y tokens no se incluyen** en la copia: están cifrados con la cuenta del sistema
+  operativo y no servirían en otro equipo. Al restaurar, la app conserva las claves de este
+  equipo.
+- **Restaurar es seguro:** primero se añaden los medios que falten (nunca se borra ninguno) y se
+  aparta la base de la copia; al reiniciar, antes de abrir la base, se mueve la actual a
+  `antes-de-restaurar-…` y se pone la de la copia. Una copia de una versión más nueva se rechaza.
+- **Arranque con el sistema** (`launchAtLogin`): arranca con `--hidden`, solo en la bandeja. Una
+  sola instancia de la app a la vez.
+- **Actualizaciones con `electron-updater`**, desde una dirección que elige el usuario (proveedor
+  genérico). Nunca descarga ni instala sin pulsar el botón. En desarrollo no hace nada.
+- **Sin firma de código.** Windows muestra el aviso de SmartScreen; en Mac sin firma de Apple no
+  hay actualización automática. El DMG no se ha podido construir ni probar desde Windows.
+
 ## 6. Diseño
 
 - **Tokens** en `renderer/design/tokens.css`: `--color-bg`, `--color-surface`, `--color-text`,

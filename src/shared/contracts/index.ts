@@ -1,4 +1,10 @@
 import { z } from 'zod'
+import {
+  BackupRunResultSchema,
+  BackupStatusSchema,
+  SnapshotInfoSchema,
+  UpdateStateSchema
+} from '../domain/system'
 import { SettingsPatchSchema, SettingsSchema } from '../domain/settings'
 import { AppInfoSchema } from '../domain/app-info'
 import { IdSchema } from '../domain/common'
@@ -197,7 +203,28 @@ export const contracts = {
   /** Exporta a MP4 y lo añade a la biblioteca; el progreso llega por video:progress. */
   'video:export': { input: ById, output: MediaAssetSchema },
   /** Transcribe el audio de los clips con Whisper en local y devuelve subtítulos. */
-  'video:transcribe': { input: ById, output: z.array(CueSchema) }
+  'video:transcribe': { input: ById, output: z.array(CueSchema) },
+
+  // --- copias de seguridad ---
+  'backup:status': { input: z.undefined(), output: BackupStatusSchema },
+  /** Abre el selector de carpeta del sistema; null si se cancela. */
+  'backup:chooseDir': { input: z.undefined(), output: z.string().nullable() },
+  'backup:run': { input: z.undefined(), output: BackupRunResultSchema },
+  'backup:list': {
+    input: z.object({ dir: z.string().min(1) }),
+    output: z.array(SnapshotInfoSchema)
+  },
+  /** Prepara la restauración y reinicia la app para aplicarla. */
+  'backup:restore': {
+    input: z.object({ dir: z.string().min(1), snapshot: z.string().min(1) }),
+    output: z.void()
+  },
+
+  // --- actualizaciones ---
+  'updates:state': { input: z.undefined(), output: UpdateStateSchema },
+  'updates:check': { input: z.undefined(), output: UpdateStateSchema },
+  'updates:download': { input: z.undefined(), output: UpdateStateSchema },
+  'updates:install': { input: z.undefined(), output: z.void() }
 } as const
 
 export type Contracts = typeof contracts
