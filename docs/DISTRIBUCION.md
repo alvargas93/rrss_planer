@@ -97,4 +97,4 @@ El repositorio `alvargas93/rrss_planer` es **público** desde el 2026-11-09, as�
 4. Adjunta los tres archivos de `dist/`: `rrss-planner-0.2.0-setup.exe`, `latest.yml` y `rrss-planner-0.2.0-setup.exe.blockmap`. Pulsa Publish release.
 5. En la app instalada, Ajustes → Actualizaciones → «Buscar actualizaciones». Debe ofrecer la versión nueva.
 
-**Primera prueba recomendada:** instala la 0.1.0, publica una 0.1.1 de prueba y comprueba que la app la ofrece, la descarga y se reinicia con ella. Que GitHub sirva así `latest.yml` **no está verificado todavía**: aún no existe ninguna release.
+**Prueba hecha el 2026-11-09:** la release v0.1.1 se publicó en GitHub, `latest.yml` se sirve bien y la app instalada pasó de la 0.1.0 a la 0.1.1. No se comprobó si la descarga la hizo la propia app o una instalación manual; la 0.2.0 sirve para confirmarlo.
