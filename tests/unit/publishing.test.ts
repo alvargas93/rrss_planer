@@ -67,6 +67,8 @@ const asset = (over: Partial<MediaAsset> = {}): MediaAsset => ({
   altText: 'Una foto',
   derivedFrom: null,
   url: 'media://local/m1.jpg',
+  thumbUrl: null,
+  probe: {},
   createdAt: 'now',
   updatedAt: 'now',
   ...over
@@ -100,7 +102,7 @@ describe('InstagramConnector.validate', () => {
         asset({ mime: 'image/png', width: 1000, height: 2000, sizeBytes: 9 * 1024 * 1024 })
       ])
     )
-    expect(issues.some((m) => m.includes('JPEG'))).toBe(true)
+    expect(issues.some((m) => m.includes('JPEG'))).toBe(false) // el PNG ya no es error: se convierte
     expect(issues.some((m) => m.includes('proporción'))).toBe(true)
     expect(issues.some((m) => m.includes('MB'))).toBe(true)
   })
@@ -307,7 +309,8 @@ function setup(
     notify,
     mediaDir: 'C:/tmp',
     onPostChanged,
-    copyToClipboard: vi.fn()
+    copyToClipboard: vi.fn(),
+    prepareImage: async (asset) => asset
   })
   return { service, posts, targets, notify, host, removed, accounts }
 }
@@ -345,10 +348,10 @@ describe('PublishingService', () => {
   it('si el medio no pasa la validación, falla sin llamar a la API', async () => {
     const { service, host } = setup()
     const detail = (service as unknown as { deps: { posts: FakePosts } }).deps.posts.detail
-    detail.media = [asset({ mime: 'image/png' })]
+    detail.media = [asset({ width: 1000, height: 3000 })]
     const targets = await service.publishNow('p1')
     expect(targets[0]?.status).toBe('failed')
-    expect(targets[0]?.lastError).toContain('JPEG')
+    expect(targets[0]?.lastError).toContain('proporción')
     expect(host.upload).not.toHaveBeenCalled()
   })
 

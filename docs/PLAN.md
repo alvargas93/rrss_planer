@@ -1,6 +1,6 @@
 # Plan del proyecto · Gestor de redes sociales de escritorio
 
-> Versión 6 · 2026-11-06 · Fase 5 completada
+> Versión 7 · 2026-11-06 · Fase 6 completada
 > Estado: stack aprobado (Electron). Nombre de la app: **RRSS Planner** (confirmado).
 > Acento: propuesta A (violeta → coral), confirmado.
 
@@ -332,6 +332,26 @@ Ficha completa verificada: `docs/connectors/instagram.md`.
 - **Resumen semanal con Claude**: acción `summary` con salida estructurada (titular,
   datos destacados, qué funcionó, qué cambiar, foco de la semana) a partir de un
   texto compacto de métricas que la pantalla pasa como contexto.
+
+### 5.5 Decisiones aplicadas en Fase 6 (vídeo)
+
+- **FFmpeg y ffprobe empaquetados** (`ffmpeg-static` 6.1 con libx264, AAC y libass;
+  `ffprobe-static`). En el instalador van fuera del asar (`asarUnpack`). El módulo
+  `src/main/video/ffmpeg.ts` los ejecuta como procesos hijo; `graph.ts` construye los
+  argumentos y el fichero de subtítulos como funciones puras probadas.
+- **Al importar un vídeo** se leen duración, tamaño, audio y códec, y se genera una
+  miniatura JPEG (`thumb_file_name`). Los vídeos importados antes se completan al arrancar.
+- **Conversión a JPEG automática** antes de publicar imágenes PNG/WebP: se guarda como
+  medio derivado (`derived_from`) sobre fondo blanco y hasta 1440 px de ancho. En el
+  compositor pasa a ser un aviso, no un bloqueo.
+- **Editor de vídeo**: proyectos con clips (recorte por segundos y orden), formato de salida
+  9:16 / 1:1 / 16:9 con tres encajes (recortar, fondo desenfocado, bandas negras),
+  subtítulos quemados con libass (estilo, posición, caja), y exportación H.264 + AAC con
+  `moov` al principio (requisito de Instagram) y progreso en tiempo real. Los clips sin
+  audio reciben silencio para poder unirse con los demás.
+- **Subtítulos**: se escriben a mano, se reparten sin IA a partir del guion, o los genera
+  Claude (acción `captions`) sincronizados con la duración. **Transcripción en local** con Whisper base (`Xenova/whisper-base`, ejecutado con ONNX Runtime). El modelo se descarga una sola vez a la carpeta de datos (la primera transcripción tarda más). Por defecto transcribe en español; el audio no sale del equipo.
+- La vista previa muestra el clip original; el resultado real solo se ve en el MP4 exportado.
 
 ## 6. Diseño
 

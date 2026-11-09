@@ -142,6 +142,7 @@ export const ScreenContextSchema = z.object({
       'settings',
       'assistant',
       'analytics',
+      'video',
       'other'
     ])
     .default('other'),
@@ -178,7 +179,8 @@ export const ACTION_KINDS = [
   'adapt',
   'hashtags',
   'weekly_plan',
-  'summary'
+  'summary',
+  'captions'
 ] as const
 export const ActionKindSchema = z.enum(ACTION_KINDS)
 export type ActionKind = z.infer<typeof ActionKindSchema>
@@ -189,7 +191,8 @@ export const ACTION_LABELS: Record<ActionKind, string> = {
   adapt: 'Adaptar a cada red',
   hashtags: 'Sugerir hashtags',
   weekly_plan: 'Plan semanal',
-  summary: 'Resumen de métricas'
+  summary: 'Resumen de métricas',
+  captions: 'Subtítulos desde el guion'
 }
 
 export const IdeasResultSchema = z.object({
@@ -250,13 +253,24 @@ export const SummaryResultSchema = z.object({
   nextWeekFocus: z.array(z.string()).describe('2 a 4 acciones concretas para la semana que viene')
 })
 
+export const CaptionsResultSchema = z.object({
+  cues: z.array(
+    z.object({
+      start: z.number().describe('Segundo de inicio'),
+      end: z.number().describe('Segundo de fin'),
+      text: z.string().describe('Texto del subtítulo, máximo 42 caracteres, sin cortar palabras')
+    })
+  )
+})
+
 export const ActionResultSchemas = {
   ideas: IdeasResultSchema,
   script: ScriptResultSchema,
   adapt: AdaptResultSchema,
   hashtags: HashtagsResultSchema,
   weekly_plan: WeeklyPlanResultSchema,
-  summary: SummaryResultSchema
+  summary: SummaryResultSchema,
+  captions: CaptionsResultSchema
 } as const
 
 export type ActionResult<K extends ActionKind = ActionKind> = z.infer<

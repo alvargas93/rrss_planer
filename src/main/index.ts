@@ -20,6 +20,11 @@ import { AccountsService } from './services/accounts.service'
 import { PublishingService } from './services/publishing.service'
 import { AnalyticsService } from './services/analytics.service'
 import { AnalyticsRepository } from './repositories/analytics.repository'
+import { VideoRepository } from './repositories/video.repository'
+import { VideoService } from './services/video.service'
+import { transcribePcm } from './video/transcribe'
+import { getDataDir } from './paths'
+import { tmpdir } from 'node:os'
 import { AiRepository } from './repositories/ai.repository'
 import { AiService } from './ai/ai.service'
 import { SafeStorageSecretStore } from './secrets/secrets.service'
@@ -177,9 +182,21 @@ function bootstrap(): SettingsService {
     notify,
     mediaDir: getMediaDir(),
     onPostChanged: (postId) => broadcast('publishing:update', { postId }),
-    copyToClipboard: (text) => clipboard.writeText(text)
+    copyToClipboard: (text) => clipboard.writeText(text),
+    prepareImage: (asset) => media.ensureJpeg(asset)
   })
 
+  const video = new VideoService({
+    repo: new VideoRepository(db),
+    media,
+    mediaDir: getMediaDir(),
+    tempDir: join(tmpdir(), 'rrss-planner'),
+    emit: (progress) => broadcast('video:progress', progress),
+    transcribe: (pcm, offsetSec) =>
+      transcribePcm(pcm, offsetSec, { modelDir: join(getDataDir(), 'models') })
+  })
+  // Vídeos importados antes de la Fase 6: completar duración y miniatura en segundo plano.
+  setTimeout(() => void media.processPending(), 8000)
   const analytics = new AnalyticsService(new AnalyticsRepository(db), accounts, connectors, targets)
 
   registerAllIpc({
@@ -195,7 +212,8 @@ function bootstrap(): SettingsService {
     publishing,
     secrets,
     mediaHost,
-    analytics
+    analytics,
+    video
   })
   handleMediaProtocol(getMediaDir())
 

@@ -312,6 +312,35 @@ function SummaryCard({ result }: { result: ActionResult<'summary'> }): React.JSX
   )
 }
 
+function CaptionsCard({ result }: { result: ActionResult<'captions'> }): React.JSX.Element {
+  const [copied, copy] = useCopy()
+  const srt = result.cues
+    .map((c, i) => `${i + 1}\n${c.start.toFixed(1)}s → ${c.end.toFixed(1)}s\n${c.text}`)
+    .join('\n\n')
+  return (
+    <div className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-1 text-sm">
+        {result.cues.map((c, i) => (
+          <li key={i} className="flex gap-2">
+            <span className="w-24 shrink-0 font-mono text-xs text-subtle">
+              {c.start.toFixed(1)}–{c.end.toFixed(1)} s
+            </span>
+            <span>{c.text}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-muted">
+        Para grabarlos en un vídeo, usa el botón «Generar con Claude» del editor de vídeo.
+      </p>
+      <div>
+        <Button size="sm" variant="ghost" onClick={() => copy('captions', srt)}>
+          {copied === 'captions' ? <Check aria-hidden /> : <Copy aria-hidden />} Copiar
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 /** Dibuja el resultado de una acción con sus botones de aplicar. Valida antes de pintar. */
 export function ActionResultCard({ block }: { block: ActionBlock }): React.JSX.Element {
   const kind: ActionKind = block.kind
@@ -332,6 +361,8 @@ export function ActionResultCard({ block }: { block: ActionBlock }): React.JSX.E
       return <WeeklyPlanCard result={parsed.data as ActionResult<'weekly_plan'>} />
     case 'summary':
       return <SummaryCard result={parsed.data as ActionResult<'summary'>} />
+    case 'captions':
+      return <CaptionsCard result={parsed.data as ActionResult<'captions'>} />
   }
 }
 

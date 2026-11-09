@@ -130,6 +130,10 @@ export const mediaAssets = sqliteTable('media_assets', {
   sha256: text('sha256').notNull(),
   altText: text('alt_text').notNull().default(''),
   derivedFrom: text('derived_from'),
+  /** Miniatura JPEG (vídeos), nombre dentro de la carpeta de medios. */
+  thumbFileName: text('thumb_file_name'),
+  /** Metadatos técnicos (códec, fps, audio) en JSON. */
+  probeJson: text('probe_json').notNull().default('{}'),
   ...timestamps,
   ...softDelete
 })
@@ -301,6 +305,24 @@ export const analyticsSyncs = sqliteTable('analytics_syncs', {
   lastError: text('last_error'),
   /** Métricas que la red rechazó la última vez (p. ej. por pocos seguidores). */
   unavailableJson: text('unavailable_json').notNull().default('[]')
+})
+
+// ---------------------------------------------------------------- Fase 6
+
+/** Proyectos del editor de vídeo. La línea de tiempo (clips, subtítulos) va en JSON. */
+export const videoProjects = sqliteTable('video_projects', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  /** 9:16 | 1:1 | 16:9 */
+  format: text('format').notNull().default('9:16'),
+  /** crop | blur | black */
+  fit: text('fit').notNull().default('crop'),
+  timelineJson: text('timeline_json').notNull().default('{}'),
+  lastExportMediaId: text('last_export_media_id').references(() => mediaAssets.id, {
+    onDelete: 'set null'
+  }),
+  ...timestamps,
+  ...softDelete
 })
 
 /** Medios adjuntos a una publicación, con orden. */

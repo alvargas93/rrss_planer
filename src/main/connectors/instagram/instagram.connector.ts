@@ -187,8 +187,8 @@ export class InstagramConnector implements Connector {
       if (asset.kind === 'image') {
         if (!rule.imageMimes.includes(asset.mime)) {
           issues.push({
-            level: 'error',
-            message: `"${asset.originalName}" no es JPEG. Instagram solo acepta JPEG (conversión automática en la Fase 6).`
+            level: 'warning',
+            message: `"${asset.originalName}" no es JPEG: se convertirá automáticamente al publicar.`
           })
         }
         if (asset.sizeBytes > rule.maxImageBytes) {

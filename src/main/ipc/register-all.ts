@@ -14,6 +14,7 @@ import type { AiService } from '../ai/ai.service'
 import type { AccountsService } from '../services/accounts.service'
 import type { PublishingService } from '../services/publishing.service'
 import type { AnalyticsService } from '../services/analytics.service'
+import type { VideoService } from '../services/video.service'
 import type { SecretStore } from '../secrets/secrets.service'
 import type { MediaHost } from '../media-host/media-host'
 import { APP_DISPLAY_NAME, getDataDir, getDbPath } from '../paths'
@@ -37,6 +38,7 @@ export interface IpcDependencies {
   secrets: SecretStore
   mediaHost: () => MediaHost
   analytics: AnalyticsService
+  video: VideoService
 }
 
 /** Conecta cada canal de los contratos con el servicio que lo atiende. */
@@ -147,6 +149,8 @@ export function registerAllIpc(deps: IpcDependencies): void {
   handle('media:list', () => deps.media.list())
   handle('media:update', ({ id, patch }) => deps.media.update(id, patch))
   handle('media:delete', ({ id }) => deps.media.delete(id))
+  handle('media:reprocess', ({ id }) => deps.media.reprocess(id))
+  handle('media:ensureJpeg', ({ id }) => deps.media.ensureJpeg(deps.media.get(id)))
 
   // --- dashboard ---
   handle('dashboard:summary', () => deps.dashboard.summary())
@@ -157,6 +161,14 @@ export function registerAllIpc(deps: IpcDependencies): void {
     accountId ? deps.analytics.sync(accountId).then((r) => [r]) : deps.analytics.syncAll()
   )
   handle('analytics:digest', (query) => ({ text: deps.analytics.digest(query) }))
+
+  // --- vídeo ---
+  handle('video:projects:list', () => deps.video.list())
+  handle('video:projects:create', (input) => deps.video.create(input))
+  handle('video:projects:update', ({ id, patch }) => deps.video.update(id, patch))
+  handle('video:projects:delete', ({ id }) => deps.video.delete(id))
+  handle('video:export', ({ id }) => deps.video.export(id))
+  handle('video:transcribe', ({ id }) => deps.video.transcribe(id))
 
   // --- Claude ---
   handle('ai:status', () => deps.ai.status())

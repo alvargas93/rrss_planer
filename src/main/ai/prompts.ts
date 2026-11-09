@@ -38,6 +38,7 @@ export function describeContext(context: ScreenContext): string {
     settings: 'Ajustes',
     assistant: 'Asistente',
     analytics: 'Analítica',
+    video: 'Editor de vídeo',
     other: 'otra'
   }
   parts.push(`Pantalla actual: ${screenLabel[context.screen]}.`)
@@ -95,6 +96,8 @@ export function buildActionPrompt(
       return `Sugiere entre 10 y 20 hashtags para el contenido en pantalla, ordenados de más a menos relevante, mezclando amplios y de nicho, sin genéricos vacíos (#love, #instagood). ${source}${extra}`
     case 'summary':
       return `Escribe un resumen semanal de rendimiento a partir de las métricas que hay en el contexto ("Información adicional"). Sé concreto: cifras, variaciones y qué publicaciones funcionaron. Si faltan métricas, dilo sin inventar. Termina con acciones realistas para la semana que viene.${extra}`
+    case 'captions':
+      return `Convierte el guion que hay en el contexto ("Información adicional") en subtítulos sincronizados para un vídeo de la duración indicada. Reglas: cada subtítulo de 1 a 4 segundos, máximo 42 caracteres, frases naturales sin cortar palabras, sin solapar tiempos, cubriendo toda la duración y respetando el ritmo del habla (unas 2,5 palabras por segundo). Devuelve solo los subtítulos.${extra}`
     case 'weekly_plan':
       return `Propón un plan de publicaciones para la semana que viene (lunes = día 0), entre 4 y 7 piezas, repartidas entre las redes y equilibrando los pilares de contenido. Cada pieza con red, formato, título y un esbozo de dos frases. Horas razonables en hora local. ${source}${extra}`
   }
@@ -108,7 +111,8 @@ export function describeActionRequest(kind: ActionKind, instruction: string): st
     adapt: 'Adaptar a cada red',
     hashtags: 'Sugerir hashtags',
     weekly_plan: 'Plan semanal',
-    summary: 'Resumen de métricas'
+    summary: 'Resumen de métricas',
+    captions: 'Subtítulos desde el guion'
   }
   return instruction.trim() ? `${labels[kind]}: ${instruction.trim()}` : labels[kind]
 }

@@ -32,6 +32,8 @@ class FakeMediaRepository implements Pick<MediaRepository, 'list' | 'findBySha' 
       altText: '',
       derivedFrom: null,
       url: mediaUrl(input.fileName),
+      thumbUrl: null,
+      probe: {},
       createdAt: 'now',
       updatedAt: 'now'
     }

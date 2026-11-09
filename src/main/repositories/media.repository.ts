@@ -7,6 +7,15 @@ import { AppError } from '@shared/domain/errors'
 
 type Row = typeof mediaAssets.$inferSelect
 
+function parseProbe(json: string): Record<string, unknown> {
+  try {
+    const v: unknown = JSON.parse(json)
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
 export function toMediaAsset(row: Row): MediaAsset {
   return {
     id: row.id,
@@ -22,6 +31,8 @@ export function toMediaAsset(row: Row): MediaAsset {
     altText: row.altText,
     derivedFrom: row.derivedFrom,
     url: mediaUrl(row.fileName),
+    thumbUrl: row.thumbFileName ? mediaUrl(row.thumbFileName) : null,
+    probe: parseProbe(row.probeJson),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -38,6 +49,19 @@ export interface MediaCreate {
   durationMs: number | null
   sizeBytes: number
   sha256: string
+  derivedFrom?: string | null
+  altText?: string
+  thumbFileName?: string | null
+  probe?: Record<string, unknown>
+}
+
+export interface MediaPatch {
+  altText?: string
+  width?: number | null
+  height?: number | null
+  durationMs?: number | null
+  thumbFileName?: string | null
+  probe?: Record<string, unknown>
 }
 
 export class MediaRepository {
@@ -69,6 +93,11 @@ export class MediaRepository {
     return toMediaAsset(row)
   }
 
+  find(id: string): MediaAsset | null {
+    const row = this.db.select().from(mediaAssets).where(eq(mediaAssets.id, id)).get()
+    return row && !row.deletedAt ? toMediaAsset(row) : null
+  }
+
   findBySha(sha256: string): MediaAsset | null {
     const row = this.db.select().from(mediaAssets).where(eq(mediaAssets.sha256, sha256)).get()
     if (!row) return null
@@ -81,6 +110,27 @@ export class MediaRepository {
         .run()
     }
     return toMediaAsset({ ...row, deletedAt: null })
+  }
+
+  /** Versión derivada (p. ej. JPEG de un PNG) ya generada para un original. */
+  findDerived(parentId: string, mime: string): MediaAsset | null {
+    const row = this.db
+      .select()
+      .from(mediaAssets)
+      .where(
+        and(
+          eq(mediaAssets.derivedFrom, parentId),
+          eq(mediaAssets.mime, mime),
+          isNull(mediaAssets.deletedAt)
+        )
+      )
+      .get()
+    return row ? toMediaAsset(row) : null
+  }
+
+  /** Vídeos a los que falta análisis técnico (duración, miniatura). */
+  listUnprocessedVideos(): MediaAsset[] {
+    return this.list().filter((a) => a.kind === 'video' && (a.durationMs === null || !a.thumbUrl))
   }
 
   create(input: MediaCreate): MediaAsset {
@@ -96,8 +146,10 @@ export class MediaRepository {
       durationMs: input.durationMs,
       sizeBytes: input.sizeBytes,
       sha256: input.sha256,
-      altText: '',
-      derivedFrom: null,
+      altText: input.altText ?? '',
+      derivedFrom: input.derivedFrom ?? null,
+      thumbFileName: input.thumbFileName ?? null,
+      probeJson: JSON.stringify(input.probe ?? {}),
       createdAt: now,
       updatedAt: now,
       deletedAt: null
@@ -106,11 +158,12 @@ export class MediaRepository {
     return toMediaAsset(row)
   }
 
-  update(id: string, patch: { altText?: string }): MediaAsset {
+  update(id: string, patch: MediaPatch): MediaAsset {
     this.get(id)
+    const { probe, ...rest } = patch
     this.db
       .update(mediaAssets)
-      .set({ ...patch, updatedAt: nowIso() })
+      .set({ ...rest, ...(probe ? { probeJson: JSON.stringify(probe) } : {}), updatedAt: nowIso() })
       .where(eq(mediaAssets.id, id))
       .run()
     return this.get(id)

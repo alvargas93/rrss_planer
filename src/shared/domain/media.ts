@@ -18,7 +18,11 @@ export const MediaAssetSchema = z.object({
   altText: z.string(),
   derivedFrom: IdSchema.nullable(),
   /** URL que la interfaz puede usar directamente en <img> o <video>. */
-  url: z.string()
+  url: z.string(),
+  /** Miniatura JPEG para vídeos (null hasta que se analiza). */
+  thumbUrl: z.string().nullable().default(null),
+  /** Datos técnicos (hasAudio, videoCodec, fps…). */
+  probe: z.record(z.string(), z.unknown()).default({})
 })
 export type MediaAsset = z.infer<typeof MediaAssetSchema>
 

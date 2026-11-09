@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Network } from '@shared/connectors/networks'
 import { ScreenContextSchema, type ScreenContext } from '@shared/domain/ai'
+import type { MediaAsset } from '@shared/domain/media'
 
 /** Lo que la pantalla actual cuenta al asistente. Cada página lo actualiza al montarse. */
 interface ScreenContextState {
@@ -46,6 +47,7 @@ export type ComposerInsert =
   | { kind: 'body'; text: string }
   | { kind: 'variant'; network: Network; text: string }
   | { kind: 'appendBody'; text: string }
+  | { kind: 'media'; asset: MediaAsset }
 
 interface ComposerBridgeState {
   pending: ComposerInsert | null

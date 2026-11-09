@@ -16,7 +16,8 @@ const ACTION_HINT: Record<ActionKind, string> = {
   adapt: 'Reescribe el texto base para cada red activada.',
   hashtags: 'Para el contenido que tienes abierto.',
   weekly_plan: 'Propone la semana que viene; tú decides si crear los borradores.',
-  summary: 'Resume las métricas de la pantalla de Analítica (ábrela antes).'
+  summary: 'Resume las métricas de la pantalla de Analítica (ábrela antes).',
+  captions: 'Convierte el guion del editor de vídeo en subtítulos sincronizados.'
 }
 
 export function AssistantChat({ className }: { className?: string }): React.JSX.Element {

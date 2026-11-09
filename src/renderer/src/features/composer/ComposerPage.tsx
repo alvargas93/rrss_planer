@@ -234,6 +234,11 @@ function ComposerForm({
       setForm((current) => {
         if (insert.kind === 'body') return { ...current, body: insert.text }
         if (insert.kind === 'appendBody') return { ...current, body: current.body + insert.text }
+        if (insert.kind === 'media') {
+          return current.media.some((m) => m.id === insert.asset.id)
+            ? current
+            : { ...current, media: [...current.media, insert.asset] }
+        }
         const variant = current.variants[insert.network] ?? {
           kind: NETWORK_META[insert.network].defaultKind,
           text: '',

@@ -100,7 +100,7 @@ const MESES = [
   check((await theme(win)) === 'dark', 'tema oscuro aplicado al pulsar')
   await win.screenshot({ path: join(shots, '03-ajustes-oscuro.png') })
 
-  await go(win, 'Vídeo', 'text=llega en la Fase 6')
+  await go(win, 'Inicio', 'text=Próximos 7 días')
   check(true, 'sección futura muestra pantalla "pronto"')
 
   await win.keyboard.press('Tab')
@@ -304,6 +304,29 @@ const MESES = [
   await win.getByRole('link', { name: 'Ir a Cuentas' }).waitFor()
   check(true, 'analítica: estado vacío sin cuentas conectadas')
   await win.screenshot({ path: join(shots, '40-analitica-vacia.png') })
+
+  // Fase 6: editor de vídeo: crear proyecto, cambiar formato y ver el estado inicial
+  await go(win, 'Vídeo', 'text=Recorta, une, añade subtítulos')
+  await win.getByRole('button', { name: 'Nuevo proyecto' }).first().click()
+  await win.getByLabel('Nombre').waitFor()
+  await win.getByRole('radio', { name: '16:9' }).click()
+  await win.getByText('1920×1080').waitFor()
+  check(true, 'vídeo: proyecto creado y formato 16:9 aplicado')
+  await win.getByText('Añade uno o varios vídeos de la biblioteca.').waitFor()
+  const exportButton = win.getByRole('button', { name: 'Exportar MP4' })
+  check(await exportButton.isDisabled(), 'vídeo: exportar deshabilitado sin clips')
+  check(
+    await win.getByRole('button', { name: 'Transcribir audio (local)' }).isDisabled(),
+    'vídeo: transcribir deshabilitado sin clips'
+  )
+  await win.screenshot({ path: join(shots, '50-video.png') })
+  await win
+    .getByRole('button', { name: /^Eliminar proyecto/ })
+    .first()
+    .click({ force: true })
+  await confirmInDialog(win, 'Eliminar')
+  await win.waitForTimeout(300)
+  check(true, 'vídeo: proyecto eliminado')
 
   check(errors.length === 0, `sin errores de consola en la sesión 4 (${errors.length})`)
   if (errors.length) console.log(errors.join('\n'))

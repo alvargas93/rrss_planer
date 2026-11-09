@@ -44,6 +44,12 @@ import {
   AnalyticsQuerySchema,
   SyncResultSchema
 } from '../domain/analytics'
+import {
+  VideoProjectCreateSchema,
+  VideoProjectSchema,
+  VideoProjectUpdateSchema,
+  CueSchema
+} from '../domain/video'
 import { NETWORKS } from '../connectors/networks'
 
 const ById = z.object({ id: IdSchema })
@@ -93,6 +99,10 @@ export const contracts = {
   'media:list': { input: z.undefined(), output: z.array(MediaAssetSchema) },
   'media:update': { input: MediaUpdateSchema, output: MediaAssetSchema },
   'media:delete': { input: ById, output: z.void() },
+  /** Vuelve a analizar un vídeo (duración, miniatura). */
+  'media:reprocess': { input: ById, output: MediaAssetSchema },
+  /** Devuelve la versión JPEG de una imagen (la crea si hace falta). */
+  'media:ensureJpeg': { input: ById, output: MediaAssetSchema },
 
   'dashboard:summary': { input: z.undefined(), output: DashboardSummarySchema },
 
@@ -167,7 +177,17 @@ export const contracts = {
     input: z.object({ accountId: IdSchema.optional() }),
     output: z.array(SyncResultSchema)
   },
-  'analytics:digest': { input: AnalyticsQuerySchema, output: z.object({ text: z.string() }) }
+  'analytics:digest': { input: AnalyticsQuerySchema, output: z.object({ text: z.string() }) },
+
+  // --- vídeo ---
+  'video:projects:list': { input: z.undefined(), output: z.array(VideoProjectSchema) },
+  'video:projects:create': { input: VideoProjectCreateSchema, output: VideoProjectSchema },
+  'video:projects:update': { input: VideoProjectUpdateSchema, output: VideoProjectSchema },
+  'video:projects:delete': { input: ById, output: z.void() },
+  /** Exporta a MP4 y lo añade a la biblioteca; el progreso llega por video:progress. */
+  'video:export': { input: ById, output: MediaAssetSchema },
+  /** Transcribe el audio de los clips con Whisper en local y devuelve subtítulos. */
+  'video:transcribe': { input: ById, output: z.array(CueSchema) }
 } as const
 
 export type Contracts = typeof contracts

@@ -28,6 +28,8 @@ export interface PublishingDeps {
   onPostChanged: (postId: string) => void
   /** Copia texto al portapapeles (modo manual). Inyectado para poder probar sin Electron. */
   copyToClipboard: (text: string) => void
+  /** Devuelve una versión JPEG de una imagen (la propia si ya lo es). */
+  prepareImage: (asset: PostDetail['media'][number]) => Promise<PostDetail['media'][number]>
 }
 
 /**
@@ -262,7 +264,11 @@ export class PublishingService {
     try {
       const host = this.deps.mediaHost()
       const media: Array<{ asset: PostDetail['media'][number]; publicUrl: string }> = []
-      for (const asset of detail.media) {
+      for (const original of detail.media) {
+        const asset =
+          original.kind === 'image' && original.mime !== 'image/jpeg'
+            ? await this.deps.prepareImage(original)
+            : original
         const uploaded = await host.upload(asset, join(this.deps.mediaDir, asset.fileName))
         hosted.push(uploaded)
         media.push({ asset, publicUrl: uploaded.publicUrl })

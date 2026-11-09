@@ -36,6 +36,13 @@
       "when": 1793982695397,
       "tag": "0004_fase5_analitica",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793983289985,
+      "tag": "0005_fase6_video",
+      "breakpoints": true
     }
   ]
 }
